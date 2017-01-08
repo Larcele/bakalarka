@@ -48,6 +48,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.b_mapRefresh = new System.Windows.Forms.Button();
+            this.l_pathLength = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             this.SuspendLayout();
@@ -198,15 +199,15 @@
             // 
             // tb_pathOutput
             // 
-            this.tb_pathOutput.Location = new System.Drawing.Point(955, 225);
+            this.tb_pathOutput.Location = new System.Drawing.Point(867, 266);
             this.tb_pathOutput.Multiline = true;
             this.tb_pathOutput.Name = "tb_pathOutput";
-            this.tb_pathOutput.Size = new System.Drawing.Size(135, 129);
+            this.tb_pathOutput.Size = new System.Drawing.Size(225, 129);
             this.tb_pathOutput.TabIndex = 8;
             // 
             // visitedLed
             // 
-            this.visitedLed.Location = new System.Drawing.Point(955, 374);
+            this.visitedLed.Location = new System.Drawing.Point(957, 415);
             this.visitedLed.Name = "visitedLed";
             this.visitedLed.ReadOnly = true;
             this.visitedLed.Size = new System.Drawing.Size(22, 22);
@@ -214,7 +215,7 @@
             // 
             // pathLed
             // 
-            this.pathLed.Location = new System.Drawing.Point(956, 402);
+            this.pathLed.Location = new System.Drawing.Point(958, 443);
             this.pathLed.Name = "pathLed";
             this.pathLed.ReadOnly = true;
             this.pathLed.Size = new System.Drawing.Size(22, 22);
@@ -223,7 +224,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(983, 374);
+            this.label2.Location = new System.Drawing.Point(985, 415);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(49, 16);
             this.label2.TabIndex = 11;
@@ -232,7 +233,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(984, 402);
+            this.label3.Location = new System.Drawing.Point(986, 443);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(35, 16);
             this.label3.TabIndex = 12;
@@ -248,11 +249,22 @@
             this.b_mapRefresh.UseVisualStyleBackColor = true;
             this.b_mapRefresh.Click += new System.EventHandler(this.b_mapRefresh_Click);
             // 
+            // l_pathLength
+            // 
+            this.l_pathLength.AutoSize = true;
+            this.l_pathLength.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.l_pathLength.Location = new System.Drawing.Point(863, 233);
+            this.l_pathLength.Name = "l_pathLength";
+            this.l_pathLength.Size = new System.Drawing.Size(193, 20);
+            this.l_pathLength.TabIndex = 14;
+            this.l_pathLength.Text = "Shortest Path Length:";
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1582, 851);
+            this.Controls.Add(this.l_pathLength);
             this.Controls.Add(this.b_mapRefresh);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
@@ -299,6 +311,7 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Button b_mapRefresh;
+        private System.Windows.Forms.Label l_pathLength;
     }
 }
 

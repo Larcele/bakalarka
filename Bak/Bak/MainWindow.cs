@@ -17,6 +17,7 @@ namespace Bak
 
         List<int> PathfindingSolution = new List<int>();
         List<int> searchedNodes = new List<int>();
+        string FilePath = "C:\\Users\\Lenovo\\Desktop\\primitive.gmap";
 
         GameMap gameMap;
         public MainWindow()
@@ -31,7 +32,9 @@ namespace Bak
             mainPanel.Width = 600;
             mainPanel.Height = 600;
             
-            gameMap = new GridMap(this, 5, 5, "C:\\Users\\Lenovo\\Desktop\\retard.gmap");
+            gameMap = new GridMap(this, 5, 5, FilePath);
+            this.Text = FilePath;
+
             RedrawMap();
             editingModesButton_Click(b_nontraversable, null);
         }
@@ -41,11 +44,19 @@ namespace Bak
             StringBuilder[] lines = initSaveFile();
             string[] mapContent = createGridMapRepresentation(lines);
 
-            SaveFileDialog savefileDialog = new SaveFileDialog { FileName = "untitled.gmap", Filter = "GMAP files (*.gmap)|*.gmap"};
+            string filename = getFilenameFromPath();
+
+            SaveFileDialog savefileDialog = new SaveFileDialog { FileName = filename, Filter = "GMAP files (*.gmap)|*.gmap"};
             if (savefileDialog.ShowDialog() == DialogResult.OK)
             {
                 File.WriteAllLines(savefileDialog.FileName, mapContent);
             }
+        }
+
+        private string getFilenameFromPath()
+        {
+            string[] tmp = FilePath.Split(new string[] { "\\" }, StringSplitOptions.None);
+            return tmp[tmp.Length - 1];
         }
 
         private string[] createGridMapRepresentation(StringBuilder[] lines)
@@ -167,6 +178,7 @@ namespace Bak
             switch ((string)c_selectedPathfinding.SelectedItem)
             {
                 case "A*":
+                    MessageBox.Show("To be implemented soon");
                     break;
                 case "BackTrack":
                     StartBackTrackSearch();
