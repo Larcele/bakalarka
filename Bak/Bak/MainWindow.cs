@@ -16,6 +16,7 @@ namespace Bak
         public Panel mainPanel;
 
         List<int> PathfindingSolution = new List<int>();
+        List<int> searchedNodes = new List<int>();
 
         GameMap gameMap;
         public MainWindow()
@@ -161,6 +162,8 @@ namespace Bak
         private void b_startPathFinding_Click(object sender, EventArgs e)
         {
             PathfindingSolution.Clear();
+            searchedNodes.Clear();
+
             switch ((string)c_selectedPathfinding.SelectedItem)
             {
                 case "A*":
@@ -190,6 +193,10 @@ namespace Bak
 
         private void backtrackMap(List<int> path, Node current)
         {
+            //not needed for pathfinding; remembered for future map refreshing, 
+            //prevents accessing redundant, non-changed nodes.
+            searchedNodes.Add(current.ID);
+
             path.Add(current.ID);
             gameMap.GraphNodes[current.ID].BackColor = (gameMap.GraphNodes[current.ID].Type != GameMap.NodeType.EndPosition && gameMap.GraphNodes[current.ID].Type != GameMap.NodeType.StartPosition) ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gameMap.GraphNodes[current.ID].Type];
             if (current.Type == GameMap.NodeType.EndPosition)
@@ -211,6 +218,14 @@ namespace Bak
                 }
             }
             path.Remove(current.ID);
+        }
+
+        private void b_mapRefresh_Click(object sender, EventArgs e)
+        {
+            foreach (int nodeID in searchedNodes)
+            {
+                gameMap.GraphNodes[nodeID].BackColor = ColorPalette.NodeTypeColor[gameMap.GraphNodes[nodeID].Type];
+            }
         }
     }
 }
