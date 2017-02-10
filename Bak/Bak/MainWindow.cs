@@ -61,7 +61,7 @@ namespace Bak
 
         private string[] createGridMapRepresentation(StringBuilder[] lines)
         {
-            int[] tmpMap = cloneMapKeysAndSort();
+            var tmpMap = cloneMapKeysAndSort();
             int counter = 0;
             int linePosition = 0;
 
@@ -83,13 +83,11 @@ namespace Bak
             return res;
         }
 
-        private int[] cloneMapKeysAndSort()
+        private List<int> cloneMapKeysAndSort()
         {
-            var mapKeys = gameMap.GraphNodes.Keys;
-            int[] tmpMap = new int[mapKeys.Count];
-            mapKeys.ToList().CopyTo(tmpMap);
-            Array.Sort(tmpMap);
-            return tmpMap;
+            var mapKeys = gameMap.GraphNodes.Keys.ToList();
+            mapKeys.Sort((id1, id2) => id1.CompareTo(id2));
+            return mapKeys;
         }
 
         private StringBuilder[] initSaveFile()
