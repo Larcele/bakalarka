@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,8 @@ namespace Bak
 {
     public partial class MainWindow : Form
     {
+        private Stopwatch stopWatch;
+
         public Panel mainPanel;
 
         List<int> PathfindingSolution = new List<int>();
@@ -195,6 +198,9 @@ namespace Bak
 
         private void StartDijkstraSearch()
         {
+            stopWatch = new Stopwatch();
+            stopWatch.Start();
+
             Dictionary<int, NodeInfo> shortestDistances = new Dictionary<int, NodeInfo>();
 
             //init the distances to each node from the starting node
@@ -223,7 +229,8 @@ namespace Bak
                 }
                 currentNodeID = closestNeighbor(shortestDistances);
             }
-           // MessageBox.Show("End");
+            stopWatch.Stop();
+            tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
 
             foreach (var id in searchedNodes)
             {
@@ -265,8 +272,14 @@ namespace Bak
 
         private void StartBackTrackSearch()
         {
+            stopWatch = new Stopwatch();
+            stopWatch.Start();
+
             List<int> path = new List<int>();
             backtrackMap(path, gMap.Nodes[gMap.StartNodeID]);
+            stopWatch.Stop();
+            tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
+
             tb_pathOutput.Text = "";
             foreach (int id in PathfindingSolution)
             {
