@@ -181,6 +181,7 @@
             this.c_selectedPathfinding.FormattingEnabled = true;
             this.c_selectedPathfinding.Items.AddRange(new object[] {
             "BackTrack",
+            "Dijkstra",
             "A*"});
             this.c_selectedPathfinding.Location = new System.Drawing.Point(957, 63);
             this.c_selectedPathfinding.Name = "c_selectedPathfinding";

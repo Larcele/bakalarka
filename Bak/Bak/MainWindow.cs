@@ -16,10 +16,10 @@ namespace Bak
         public Panel mainPanel;
 
         List<int> PathfindingSolution = new List<int>();
-        List<int> searchedNodes = new List<int>();
+        HashSet<int> searchedNodes = new HashSet<int>();
         string FilePath = "C:\\Users\\Lenovo\\Desktop\\primitive.gmap";
 
-        GameMap gameMap;
+        GameMap gMap;
         public MainWindow()
         {
             InitializeComponent();
@@ -32,7 +32,7 @@ namespace Bak
             mainPanel.Width = 600;
             mainPanel.Height = 600;
             
-            gameMap = new GridMap(this, 5, 5, FilePath);
+            gMap = new GridMap(this, 5, 5, FilePath);
             this.Text = FilePath;
 
             RedrawMap();
@@ -65,17 +65,17 @@ namespace Bak
             int counter = 0;
             int linePosition = 0;
 
-            string[] res = new string[gameMap.Height];
+            string[] res = new string[gMap.Height];
             foreach (var nodeID in tmpMap)
             {
-                if (counter == gameMap.Width)
+                if (counter == gMap.Width)
                 {
                     res[linePosition] = lines[linePosition].ToString();
                     linePosition++;
                     counter = 0;
                 }
-                Node n = gameMap.GraphNodes[nodeID];
-                lines[linePosition].Append(gameMap.NodeTypeMapChar[n.Type]);
+                Node n = gMap.Nodes[nodeID];
+                lines[linePosition].Append(gMap.NodeTypeMapChar[n.Type]);
                 counter++;
             }
             //last line
@@ -85,15 +85,15 @@ namespace Bak
 
         private List<int> cloneMapKeysAndSort()
         {
-            var mapKeys = gameMap.GraphNodes.Keys.ToList();
+            var mapKeys = gMap.Nodes.Keys.ToList();
             mapKeys.Sort((id1, id2) => id1.CompareTo(id2));
             return mapKeys;
         }
 
         private StringBuilder[] initSaveFile()
         {
-            StringBuilder[] res = new StringBuilder[gameMap.Height];
-            for (int i = 0; i < gameMap.Height; ++i)
+            StringBuilder[] res = new StringBuilder[gMap.Height];
+            for (int i = 0; i < gMap.Height; ++i)
             {  res[i] = new StringBuilder(""); }
             return res;
         }
@@ -117,14 +117,14 @@ namespace Bak
             int height = mapContent.Length;
 
             this.mainPanel.Controls.Clear();
-            gameMap = new GridMap(this, width, height, mapContent);
+            gMap = new GridMap(this, width, height, mapContent);
             RedrawMap();
             editingModesButton_Click(b_nontraversable, null);
         }
 
         private void RedrawMap()
         {
-            gameMap.DrawAllNodes();
+            gMap.DrawAllNodes();
             Update();
             Invalidate();
         }
@@ -139,22 +139,22 @@ namespace Bak
             switch ((string)button.Tag)
             {
                 case "traversable":
-                    gameMap.EditingNodeMode = GameMap.NodeType.Traversable;
+                    gMap.EditingNodeMode = GameMap.NodeType.Traversable;
                     break;
 
                 case "!traversable":
-                    gameMap.EditingNodeMode = GameMap.NodeType.Obstacle;
+                    gMap.EditingNodeMode = GameMap.NodeType.Obstacle;
                     break;
 
                 case "end":
-                    gameMap.EditingNodeMode = GameMap.NodeType.EndPosition;
+                    gMap.EditingNodeMode = GameMap.NodeType.EndPosition;
                     break;
 
                 case "start":
-                    gameMap.EditingNodeMode = GameMap.NodeType.StartPosition;
+                    gMap.EditingNodeMode = GameMap.NodeType.StartPosition;
                     break;
             }
-            button.BackColor = ColorPalette.NodeTypeColor[gameMap.EditingNodeMode];
+            button.BackColor = ColorPalette.NodeTypeColor[gMap.EditingNodeMode];
         }
         
         private void setEditingButtonsDefualtColor()
@@ -173,31 +173,105 @@ namespace Bak
             PathfindingSolution.Clear();
             searchedNodes.Clear();
 
-            switch ((string)c_selectedPathfinding.SelectedItem)
-            {
-                case "A*":
-                    MessageBox.Show("To be implemented soon");
-                    break;
-                case "BackTrack":
-                    StartBackTrackSearch();
-                    break;
-            }
-        }
-
-        private void StartBackTrackSearch()
-        {
-            if (gameMap.StartNodeID == -1 || gameMap.EndNodeID == -1)
+            if (gMap.StartNodeID == -1 || gMap.EndNodeID == -1)
             {
                 MessageBox.Show("Please set start and end node on map before search.");
                 return;
             }
+
+            switch ((string)c_selectedPathfinding.SelectedItem)
+            {
+                case "A*":
+                    StartAstarSearch();
+                    break;
+                case "BackTrack":
+                    StartBackTrackSearch();
+                    break;
+                case "Dijkstra":
+                    StartDijkstraSearch();
+                    break;
+            }
+        }
+
+        private void StartDijkstraSearch()
+        {
+            Dictionary<int, NodeInfo> shortestDistances = new Dictionary<int, NodeInfo>();
+
+            //init the distances to each node from the starting node
+            foreach (var nodeID in gMap.Nodes.Keys)
+            {
+                shortestDistances.Add(nodeID, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+            }
+            shortestDistances[gMap.StartNodeID] = new NodeInfo(0, 0);
+
+            int currentNodeID = gMap.StartNodeID;
+            while (currentNodeID > -1)
+            {
+                searchedNodes.Add(currentNodeID);
+                foreach (var neighbor in gMap.Nodes[currentNodeID].susedneID)
+                {
+                    if (gMap.Nodes[neighbor].Type != GameMap.NodeType.Obstacle && !searchedNodes.Contains(neighbor))
+                    {
+                        //+1 since that is the cell's edge value
+                        if (shortestDistances[currentNodeID].PathCost + 1 < shortestDistances[neighbor].PathCost)
+                        {
+                            shortestDistances[neighbor].PathCost = shortestDistances[currentNodeID].PathCost + 1;
+                            shortestDistances[neighbor].Parent = currentNodeID;
+                            //update also the path 
+                        }
+                    }
+                }
+                currentNodeID = closestNeighbor(shortestDistances);
+            }
+           // MessageBox.Show("End");
+
+            foreach (var id in searchedNodes)
+            {
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
+            }
+
+            int parentID = gMap.EndNodeID;
+            while (parentID != gMap.StartNodeID)
+            {
+                parentID = shortestDistances[parentID].Parent;
+                gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
+                
+            }
+        }
+
+        private int closestNeighbor(Dictionary<int, NodeInfo> shortestDistances)
+        {
+            var nonVisited = shortestDistances.Where(node => !searchedNodes.Contains(node.Key) && node.Value.PathCost != Int32.MaxValue);
+
+            int smallestSeen = Int32.MaxValue;
+            int minID = -1;
+            foreach (var item in nonVisited)
+            {
+                if (item.Value.PathCost < smallestSeen)
+                {
+                    minID = item.Key;
+                    smallestSeen = item.Value.PathCost;
+                }
+            }
+
+            return minID;
+        }
+
+        private void StartAstarSearch()
+        {
+            MessageBox.Show("To Be Implemented..");
+            //throw new NotImplementedException();
+        }
+
+        private void StartBackTrackSearch()
+        {
             List<int> path = new List<int>();
-            backtrackMap(path, gameMap.GraphNodes[gameMap.StartNodeID]);
+            backtrackMap(path, gMap.Nodes[gMap.StartNodeID]);
             tb_pathOutput.Text = "";
             foreach (int id in PathfindingSolution)
             {
                 tb_pathOutput.Text += id + ",";
-                gameMap.GraphNodes[id].BackColor = id != gameMap.StartNodeID && id != gameMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gameMap.GraphNodes[id].Type];
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
         }
 
@@ -208,7 +282,7 @@ namespace Bak
             searchedNodes.Add(current.ID);
 
             path.Add(current.ID);
-            gameMap.GraphNodes[current.ID].BackColor = (gameMap.GraphNodes[current.ID].Type != GameMap.NodeType.EndPosition && gameMap.GraphNodes[current.ID].Type != GameMap.NodeType.StartPosition) ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gameMap.GraphNodes[current.ID].Type];
+            gMap.Nodes[current.ID].BackColor = (gMap.Nodes[current.ID].Type != GameMap.NodeType.EndPosition && gMap.Nodes[current.ID].Type != GameMap.NodeType.StartPosition) ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[current.ID].Type];
             if (current.Type == GameMap.NodeType.EndPosition)
             {
                 if (path.Count < PathfindingSolution.Count || PathfindingSolution.Count == 0)
@@ -222,9 +296,9 @@ namespace Bak
             }
             foreach (int nodeID in current.susedneID)
             {
-                if (gameMap.GraphNodes[nodeID].Type != GameMap.NodeType.Obstacle && !path.Contains(nodeID))
+                if (gMap.Nodes[nodeID].Type != GameMap.NodeType.Obstacle && !path.Contains(nodeID))
                 {
-                    backtrackMap(path, gameMap.GraphNodes[nodeID]);
+                    backtrackMap(path, gMap.Nodes[nodeID]);
                 }
             }
             path.Remove(current.ID);
@@ -234,7 +308,7 @@ namespace Bak
         {
             foreach (int nodeID in searchedNodes)
             {
-                gameMap.GraphNodes[nodeID].BackColor = ColorPalette.NodeTypeColor[gameMap.GraphNodes[nodeID].Type];
+                gMap.Nodes[nodeID].BackColor = ColorPalette.NodeTypeColor[gMap.Nodes[nodeID].Type];
             }
         }
     }

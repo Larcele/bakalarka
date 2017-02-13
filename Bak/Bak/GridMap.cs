@@ -36,7 +36,7 @@ namespace Bak
 
         public override void DrawAllNodes()
         {
-            foreach (var node in GraphNodes.Values)
+            foreach (var node in Nodes.Values)
             {
                 MW.mainPanel.Controls.Add(node);
                 if (node.ID > 2000)
@@ -52,7 +52,7 @@ namespace Bak
                 {
                     Node n = new Node(this, j * SquareSize, i * SquareSize, NodeIdAssignment, SquareSize, NodeType.Traversable);
                     NodeIdAssignment++;
-                    GraphNodes.MapByNodeID(n);
+                    Nodes.MapByNodeID(n);
                 }
             }
             InitEdges();
@@ -67,7 +67,7 @@ namespace Bak
                     NodeType type = ResolveNodeType(mapContent[i][j]);
                     Node n = new Node(this, j * SquareSize, i * SquareSize, NodeIdAssignment, SquareSize, type);
                     NodeIdAssignment++;
-                    GraphNodes.MapByNodeID(n);
+                    Nodes.MapByNodeID(n);
                 }
             }
             InitEdges();
@@ -75,18 +75,18 @@ namespace Bak
 
         private void InitEdges()
         {
-            foreach (Node n in GraphNodes.Values)
+            foreach (Node n in Nodes.Values)
             {
-                if (GraphNodes.ContainsKey(n.ID - 1) && GraphNodes[n.ID - 1].Location.Y == GraphNodes[n.ID].Location.Y)
+                if (Nodes.ContainsKey(n.ID - 1) && Nodes[n.ID - 1].Location.Y == Nodes[n.ID].Location.Y)
                     n.susedneID.Add(n.ID - 1);
 
-                if(GraphNodes.ContainsKey(n.ID + 1) && GraphNodes[n.ID + 1].Location.Y == GraphNodes[n.ID].Location.Y)
+                if(Nodes.ContainsKey(n.ID + 1) && Nodes[n.ID + 1].Location.Y == Nodes[n.ID].Location.Y)
                     n.susedneID.Add(n.ID + 1);
 
-                if (GraphNodes.ContainsKey(n.ID + Width))
+                if (Nodes.ContainsKey(n.ID + Width))
                     n.susedneID.Add(n.ID + Width);
 
-                if (GraphNodes.ContainsKey(n.ID - Width))
+                if (Nodes.ContainsKey(n.ID - Width))
                     n.susedneID.Add(n.ID - Width);
             }
         }

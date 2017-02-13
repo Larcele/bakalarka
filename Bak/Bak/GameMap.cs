@@ -12,7 +12,7 @@ namespace Bak
         public int Width { get; set; }
         public int Height { get; set; }
         public MainWindow MW;
-        public NodeCollection GraphNodes;
+        public NodeCollection Nodes;
         public int StartNodeID { get; set; }
         public int EndNodeID { get; set; }
         public int NodeIdAssignment { get; set; }
@@ -42,7 +42,7 @@ namespace Bak
             Height = height;
             StartNodeID = -1;
             EndNodeID = -1;
-            GraphNodes = new NodeCollection();
+            Nodes = new NodeCollection();
         }
 
         public abstract void InitNodes(MainWindow w);

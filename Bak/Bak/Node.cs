@@ -70,7 +70,7 @@ namespace Bak
 
                 if (ParentMap.EndNodeID != -1)
                 {
-                    Node previousEndNode = ParentMap.GraphNodes[ParentMap.EndNodeID];
+                    Node previousEndNode = ParentMap.Nodes[ParentMap.EndNodeID];
                     previousEndNode.Type = GameMap.NodeType.Traversable;
                     previousEndNode.BackColor = ColorPalette.NodeTypeColor[previousEndNode.Type];
                 }
@@ -85,7 +85,7 @@ namespace Bak
                 }
                 if (ParentMap.StartNodeID != -1)
                 {
-                    Node previousStartNode = ParentMap.GraphNodes[ParentMap.StartNodeID];
+                    Node previousStartNode = ParentMap.Nodes[ParentMap.StartNodeID];
                     previousStartNode.Type = GameMap.NodeType.Traversable;
                     previousStartNode.BackColor = ColorPalette.NodeTypeColor[previousStartNode.Type];
                 }
