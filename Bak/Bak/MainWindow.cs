@@ -20,7 +20,7 @@ namespace Bak
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
-        string FilePath = "C:\\Users\\Lenovo\\Desktop\\primitive.gmap";
+        string FilePath = "GMaps\\simple.gmap";
 
         GameMap gMap;
         public MainWindow()
@@ -106,7 +106,7 @@ namespace Bak
         
         private void loadMapToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog() { Title = "Open GMAP File", Filter = "GMAP files (*.gmap)|*.gmap" };
+            OpenFileDialog fileDialog = new OpenFileDialog() { InitialDirectory = Directory.GetCurrentDirectory() + "\\GMaps", Title = "Open GMAP File", Filter = "GMAP files (*.gmap)|*.gmap" };
             if (fileDialog.ShowDialog() == DialogResult.OK)
             {
                 string[] filelines = File.ReadAllLines(fileDialog.FileName);
@@ -237,13 +237,21 @@ namespace Bak
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
 
+            bool noPath = false;
             int parentID = gMap.EndNodeID;
             while (parentID != gMap.StartNodeID)
             {
                 parentID = shortestDistances[parentID].Parent;
+                if (parentID == Int32.MaxValue)
+                {
+                    noPath = true;
+                    break;
+                }
+
                 gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
-                
+                PathfindingSolution.Add(parentID);
             }
+            printSolution(noPath);
         }
 
         private int closestNeighbor(Dictionary<int, NodeInfo> shortestDistances)
@@ -267,7 +275,6 @@ namespace Bak
         private void StartAstarSearch()
         {
             MessageBox.Show("To Be Implemented..");
-            //throw new NotImplementedException();
         }
 
         private void StartBackTrackSearch()
@@ -280,7 +287,19 @@ namespace Bak
             stopWatch.Stop();
             tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
 
+            printSolution();
+        }
+
+        private void printSolution(bool nonExistent = false)
+        {
             tb_pathOutput.Text = "";
+
+            if (nonExistent || PathfindingSolution.Count == 0)
+            {
+                tb_pathOutput.Text = "No solution";
+                return;
+            }
+
             foreach (int id in PathfindingSolution)
             {
                 tb_pathOutput.Text += id + ",";

@@ -203,9 +203,11 @@
             // 
             // tb_pathOutput
             // 
+            this.tb_pathOutput.BackColor = System.Drawing.Color.White;
             this.tb_pathOutput.Location = new System.Drawing.Point(867, 266);
             this.tb_pathOutput.Multiline = true;
             this.tb_pathOutput.Name = "tb_pathOutput";
+            this.tb_pathOutput.ReadOnly = true;
             this.tb_pathOutput.Size = new System.Drawing.Size(189, 129);
             this.tb_pathOutput.TabIndex = 8;
             // 
