@@ -15,8 +15,11 @@ namespace Bak
     public partial class MainWindow : Form
     {
         private Stopwatch stopWatch;
+        private Node lastNodeInfo;
 
         public Panel mainPanel;
+
+        BackgroundWorker pathfinder;
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
@@ -34,6 +37,8 @@ namespace Bak
             mainPanel = panel;
             mainPanel.Width = 600;
             mainPanel.Height = 600;
+
+            mainPanel.AutoScroll = true;
             
             gMap = new GridMap(this, 5, 5, FilePath);
             this.Text = FilePath;
@@ -54,6 +59,25 @@ namespace Bak
             {
                 File.WriteAllLines(savefileDialog.FileName, mapContent);
             }
+        }
+
+        internal void FillNodeInfo(Node node)
+        {
+            if (lastNodeInfo != null)
+            {
+                lastNodeInfo.BackColor = ColorPalette.NodeTypeColor[lastNodeInfo.Type];
+            }
+
+            lastNodeInfo = node;
+
+            lastNodeInfo.BackColor = Color.Aquamarine;
+
+            tb_nodeInfo.Text = "";
+
+            tb_nodeInfo.Text += "ID: " + node.ID + Environment.NewLine;
+            tb_nodeInfo.Text += "Location: " + node.Location + Environment.NewLine;
+            tb_nodeInfo.Text += "Type: " + node.Type + Environment.NewLine;
+            tb_nodeInfo.Text += "Neighbor IDs: " + node.PrintNeighbors() + Environment.NewLine;
         }
 
         private string getFilenameFromPath()
@@ -119,10 +143,23 @@ namespace Bak
             int width = mapContent[0].Length;
             int height = mapContent.Length;
 
-            this.mainPanel.Controls.Clear();
+            RemoveMapControls();
+
             gMap = new GridMap(this, width, height, mapContent);
             RedrawMap();
             editingModesButton_Click(b_nontraversable, null);
+        }
+
+        private void RemoveMapControls()
+        {
+            //this.mainPanel.Controls.Clear();
+            while (this.mainPanel.Controls.Count > 0)
+            {
+                Control oKill = this.mainPanel.Controls[0];
+                this.mainPanel.Controls.RemoveAt(0);
+                if (oKill != null)
+                    oKill.Dispose();
+            }
         }
 
         private void RedrawMap()
@@ -182,83 +219,92 @@ namespace Bak
                 return;
             }
 
+            pathfinder = new BackgroundWorker();
+            pathfinder.WorkerSupportsCancellation = true;
+
+
+            stopWatch = new Stopwatch();
+            stopWatch.Start();
             switch ((string)c_selectedPathfinding.SelectedItem)
             {
                 case "A*":
-                    StartAstarSearch();
+                    pathfinder.DoWork += StartAstarSearch;
+                    pathfinder.RunWorkerAsync();
+
                     break;
                 case "BackTrack":
-                    StartBackTrackSearch();
+                    pathfinder.DoWork += StartBackTrackSearch;
+                    pathfinder.RunWorkerAsync();
+                    StartBackTrackSearch(null, null);
+
                     break;
                 case "Dijkstra":
-                    StartDijkstraSearch();
+                    pathfinder.DoWork += StartDijkstraSearch;
+                    pathfinder.RunWorkerAsync();
                     break;
             }
+            stopWatch.Stop();
+            tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
+            
+            printSolution();
         }
-
-        private void StartDijkstraSearch()
+        
+        private void StartDijkstraSearch(object sender, DoWorkEventArgs e)
         {
-            stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            Dictionary<int, NodeInfo> shortestDistances = new Dictionary<int, NodeInfo>();
+            Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
 
             //init the distances to each node from the starting node
             foreach (var nodeID in gMap.Nodes.Keys)
             {
-                shortestDistances.Add(nodeID, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+                shortestDist.Add(nodeID, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
             }
-            shortestDistances[gMap.StartNodeID] = new NodeInfo(0, 0);
+            shortestDist[gMap.StartNodeID] = new NodeInfo(0, 0);
 
-            int currentNodeID = gMap.StartNodeID;
-            while (currentNodeID > -1)
+            int currNodeID = gMap.StartNodeID;
+            while (currNodeID > -1)
             {
-                searchedNodes.Add(currentNodeID);
-                foreach (var neighbor in gMap.Nodes[currentNodeID].susedneID)
+                searchedNodes.Add(currNodeID);
+                foreach (var neighbor in gMap.Nodes[currNodeID].Neighbors)
                 {
-                    if (gMap.Nodes[neighbor].Type != GameMap.NodeType.Obstacle && !searchedNodes.Contains(neighbor))
+                    if (gMap.Nodes[neighbor.Key].Type != GameMap.NodeType.Obstacle && !searchedNodes.Contains(neighbor.Key))
                     {
-                        //+1 since that is the cell's edge value
-                        if (shortestDistances[currentNodeID].PathCost + 1 < shortestDistances[neighbor].PathCost)
+                        if (shortestDist[currNodeID].PathCost + neighbor.Value < shortestDist[neighbor.Key].PathCost)
                         {
-                            shortestDistances[neighbor].PathCost = shortestDistances[currentNodeID].PathCost + 1;
-                            shortestDistances[neighbor].Parent = currentNodeID;
+                            shortestDist[neighbor.Key].PathCost = shortestDist[currNodeID].PathCost + neighbor.Value;
+                            shortestDist[neighbor.Key].Parent = currNodeID;
                             //update also the path 
                         }
                     }
                 }
-                currentNodeID = closestNeighbor(shortestDistances);
+                currNodeID = closestNeighbor(shortestDist);
             }
-            stopWatch.Stop();
-            tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
 
             foreach (var id in searchedNodes)
             {
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
-
-            bool noPath = false;
+            
             int parentID = gMap.EndNodeID;
             while (parentID != gMap.StartNodeID)
             {
-                parentID = shortestDistances[parentID].Parent;
+                parentID = shortestDist[parentID].Parent;
                 if (parentID == Int32.MaxValue)
                 {
-                    noPath = true;
+                    //no path
+                    PathfindingSolution.Clear();
                     break;
                 }
 
                 gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
                 PathfindingSolution.Add(parentID);
             }
-            printSolution(noPath);
         }
 
         private int closestNeighbor(Dictionary<int, NodeInfo> shortestDistances)
         {
             var nonVisited = shortestDistances.Where(node => !searchedNodes.Contains(node.Key) && node.Value.PathCost != Int32.MaxValue);
 
-            int smallestSeen = Int32.MaxValue;
+            float smallestSeen = float.MaxValue;
             int minID = -1;
             foreach (var item in nonVisited)
             {
@@ -272,29 +318,128 @@ namespace Bak
             return minID;
         }
 
-        private void StartAstarSearch()
+        private void StartAstarSearch(object sender, DoWorkEventArgs e)
         {
-            MessageBox.Show("To Be Implemented..");
+            List<int> closedList = new List<int>();
+            List<int> openList = new List<int>();
+
+            Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
+
+            //init the distances to each node from the starting node
+            foreach (var nodeID in gMap.Nodes.Keys)
+            {
+                shortestDist.Add(nodeID, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+            }
+            shortestDist[gMap.StartNodeID] = new NodeInfo(0, 0);
+
+
+            int currNodeID = gMap.StartNodeID;
+            while (true)
+            {
+                //add all neighbors into the open list
+                foreach (var n in gMap.Nodes[currNodeID].Neighbors)
+                {
+                    if (!gMap.Nodes[n.Key].IsTraversable() || closedList.Contains(n.Key))
+                    {
+                        continue;
+                    }
+
+                    if (!openList.Contains(n.Key))
+                    {
+                        openList.Add(n.Key);
+                        searchedNodes.Add(n.Key);
+                    }
+
+                    //setting Parent
+                    if (shortestDist[n.Key].Parent == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                    }
+                    //path would be shorter for the neighbor if the path went through current node
+                    else if (shortestDist[n.Key].PathCost + gMap.Nodes[currNodeID].Neighbors[n.Key] < shortestDist[n.Key].PathCost)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + gMap.Nodes[currNodeID].Neighbors[n.Key];
+                        continue;
+                    }
+
+                    //setting pathCost
+                    if (shortestDist[n.Key].PathCost == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].PathCost = n.Value;
+                    }
+                    else
+                    {
+                        shortestDist[n.Key].PathCost += n.Value;
+                    }
+                }
+                closedList.Add(currNodeID);
+                //calculate F for all neighbors (G + H)  H = 1*(abs(currentX-targetX) + abs(currentY-targetY))
+                Dictionary<int, float> F = new Dictionary<int, float>();
+                foreach (var n in openList)
+                {
+                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H(n));
+                }
+
+                //choose the lowest F node (LFN)  (O(n))
+                currNodeID = F.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
+
+                //drop the LFN from the open list and add it to the closed list
+                openList.Remove(currNodeID);
+                closedList.Add(currNodeID);
+
+
+                if (currNodeID == gMap.EndNodeID)
+                {
+                    break;
+                }
+            }
+
+            foreach (var id in searchedNodes)
+            {
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
+            }
+
+            int parentID = gMap.EndNodeID;
+            while (parentID != gMap.StartNodeID)
+            {
+                parentID = shortestDist[parentID].Parent;
+                if (parentID == Int32.MaxValue)
+                {
+                    //no path
+                    PathfindingSolution.Clear();
+                    break;
+                }
+
+                gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
+                PathfindingSolution.Add(parentID);
+            }
+
+            pathfinder.CancelAsync();
         }
 
-        private void StartBackTrackSearch()
+        /// <summary>
+        /// the estimated movement cost to move from that given square on the grid to the final destination 
+        /// </summary>
+        /// <param name="n">Node ID to get to</param>
+        /// <returns></returns>
+        private int H(int n)
         {
-            stopWatch = new Stopwatch();
-            stopWatch.Start();
+            return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
+        }
 
+        private void StartBackTrackSearch(object sender, DoWorkEventArgs e)
+        {
             List<int> path = new List<int>();
             backtrackMap(path, gMap.Nodes[gMap.StartNodeID]);
-            stopWatch.Stop();
-            tb_elapsedTime.Text = stopWatch.Elapsed.ToString();
-
-            printSolution();
+            pathfinder.CancelAsync();
         }
 
-        private void printSolution(bool nonExistent = false)
+        private void printSolution()
         {
             tb_pathOutput.Text = "";
 
-            if (nonExistent || PathfindingSolution.Count == 0)
+            if (PathfindingSolution.Count == 0)
             {
                 tb_pathOutput.Text = "No solution";
                 return;
@@ -310,7 +455,7 @@ namespace Bak
         private void backtrackMap(List<int> path, Node current)
         {
             //not needed for pathfinding; remembered for future map refreshing, 
-            //prevents accessing redundant, non-changed nodes.
+            //prevents accessing nodes that weren't changed.
             searchedNodes.Add(current.ID);
 
             path.Add(current.ID);
@@ -326,11 +471,11 @@ namespace Bak
                 path.Remove(current.ID);
                 return;
             }
-            foreach (int nodeID in current.susedneID)
+            foreach (var node in current.Neighbors)
             {
-                if (gMap.Nodes[nodeID].Type != GameMap.NodeType.Obstacle && !path.Contains(nodeID))
+                if (gMap.Nodes[node.Key].Type != GameMap.NodeType.Obstacle && !path.Contains(node.Key))
                 {
-                    backtrackMap(path, gMap.Nodes[nodeID]);
+                    backtrackMap(path, gMap.Nodes[node.Key]);
                 }
             }
             path.Remove(current.ID);
@@ -341,6 +486,14 @@ namespace Bak
             foreach (int nodeID in searchedNodes)
             {
                 gMap.Nodes[nodeID].BackColor = ColorPalette.NodeTypeColor[gMap.Nodes[nodeID].Type];
+            }
+        }
+
+        private void MainWindow_Resize(object sender, EventArgs e)
+        {
+            foreach (Control c in this.Controls)
+            {
+                
             }
         }
     }

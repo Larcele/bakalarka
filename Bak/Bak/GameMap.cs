@@ -11,7 +11,7 @@ namespace Bak
     {
         public int Width { get; set; }
         public int Height { get; set; }
-        public MainWindow MW;
+        public MainWindow ParentWindow;
         public NodeCollection Nodes;
         public int StartNodeID { get; set; }
         public int EndNodeID { get; set; }
@@ -37,7 +37,7 @@ namespace Bak
         public GameMap(int width, int height, MainWindow window)
         {
             NodeIdAssignment = 0;
-            MW = window;
+            ParentWindow = window;
             Width = width;
             Height = height;
             StartNodeID = -1;

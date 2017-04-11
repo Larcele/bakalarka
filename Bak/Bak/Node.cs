@@ -14,10 +14,12 @@ namespace Bak
     {
         public int ID { get; private set; }
         public GameMap.NodeType Type { get; set; }
-        public List<int> susedneID;
 
-        ToolTip t = new ToolTip();
-
+        /// <summary>
+        /// neighboring nodes. Key -> the neigboring node's ID; Value -> edge value from Node(this) and the neighboring node.
+        /// </summary>
+        public Dictionary<int, float> Neighbors;
+        
         public GameMap ParentMap;
         
         #region border override
@@ -33,6 +35,7 @@ namespace Bak
             }
         }
         #endregion
+
         public Node(GameMap parent, int x, int y, int id, int size, GameMap.NodeType type)
         {
             InitializeComponent();
@@ -47,18 +50,24 @@ namespace Bak
 
             ParentMap = parent;
             Type = type;
-            susedneID = new List<int>();
-
-            this.Click += Node_Click;
-            this.MouseEnter += Node_MouseEnter;
+            Neighbors = new Dictionary<int, float>();
+            
+            this.MouseDown += Node_MouseDown;
         }
 
-        private void Node_MouseEnter(object sender, EventArgs e)
+        private void Node_MouseDown(object sender, MouseEventArgs e)
         {
-            t.Show(ID+"", this, 3000);
+            if (e.Button == MouseButtons.Left)
+            {
+                Node_Click();
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                ParentMap.ParentWindow.FillNodeInfo(this);
+            }
         }
 
-        private void Node_Click(object sender, EventArgs e)
+        private void Node_Click()
         {
             if (ParentMap.EditingNodeMode == GameMap.NodeType.EndPosition)
             {
@@ -105,6 +114,28 @@ namespace Bak
 
             Type = ParentMap.EditingNodeMode;
             BackColor = ColorPalette.NodeTypeColor[Type];
+        }
+
+        internal string PrintNeighbors()
+        {
+            string res = "{ ";
+            int i = 0;
+            foreach (var n in Neighbors)
+            {
+                res += n.Key;
+                i++;
+                if (i < Neighbors.Count)
+                {
+                    res += ", ";
+                }
+            }
+            res += "}";
+            return res;
+        }
+
+        public bool IsTraversable()
+        {
+            return Type != GameMap.NodeType.Obstacle; //all traversable and also end/start points count as traversable
         }
 
         protected override void OnPaint(PaintEventArgs e)

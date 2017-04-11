@@ -9,12 +9,12 @@ namespace Bak
 {
     internal static class ColorPalette
     {
-        internal static Color NodeColor_Path = Color.FromArgb(86, 200, 76);
-        internal static Color NodeColor_Traversable = Color.FromArgb(56, 150, 76);
-        internal static Color NodeColor_Visited = Color.FromArgb(26, 90, 76);
+        internal static Color NodeColor_Path = Color.FromArgb(188, 255, 100);
+        internal static Color NodeColor_Traversable = Color.FromArgb(84, 191, 84);
+        internal static Color NodeColor_Visited = Color.FromArgb(20, 70, 20);
         internal static Color NodeColor_Obstacle = Color.FromArgb(95, 81, 41);
-        internal static Color NodeColor_Start = Color.FromArgb(242, 196, 73);
-        internal static Color NodeColor_End = Color.FromArgb(210, 35, 35);
+        internal static Color NodeColor_Start = Color.FromArgb(210, 35, 35);
+        internal static Color NodeColor_End = Color.FromArgb(242, 196, 73); 
 
         internal static Dictionary<GameMap.NodeType, Color> NodeTypeColor = new Dictionary<GameMap.NodeType, Color>
         {

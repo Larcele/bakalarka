@@ -31,6 +31,10 @@ namespace Bak
         public GridMap(MainWindow window, int w, int h, string[] mapContent) : base(w, h, window)
         {
             SquareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            if (SquareSize < 10)
+            {
+                SquareSize = 10;
+            }
             InitNodes(window, mapContent);
         }
 
@@ -38,8 +42,8 @@ namespace Bak
         {
             foreach (var node in Nodes.Values)
             {
-                MW.mainPanel.Controls.Add(node);
-                if (node.ID > 2000)
+                ParentWindow.mainPanel.Controls.Add(node);
+                if (node.ID > 5000)
                     break;
             }
         }
@@ -77,18 +81,57 @@ namespace Bak
         {
             foreach (Node n in Nodes.Values)
             {
-                if (Nodes.ContainsKey(n.ID - 1) && Nodes[n.ID - 1].Location.Y == Nodes[n.ID].Location.Y)
-                    n.susedneID.Add(n.ID - 1);
+                // --------- Standart neighbours
 
-                if(Nodes.ContainsKey(n.ID + 1) && Nodes[n.ID + 1].Location.Y == Nodes[n.ID].Location.Y)
-                    n.susedneID.Add(n.ID + 1);
+                //left neighbour
+                if (Nodes.ContainsKey(n.ID - 1) && SameRow(n.ID - 1, n.ID))
+                    n.Neighbors.Add(n.ID - 1, 1);
 
+                //right neighbour
+                if (Nodes.ContainsKey(n.ID + 1) && SameRow(n.ID + 1, n.ID))
+                    n.Neighbors.Add(n.ID + 1, 1);
+
+                //bottom neighbour
                 if (Nodes.ContainsKey(n.ID + Width))
-                    n.susedneID.Add(n.ID + Width);
+                    n.Neighbors.Add(n.ID + Width, 1);
 
+                //upper neighbour
                 if (Nodes.ContainsKey(n.ID - Width))
-                    n.susedneID.Add(n.ID - Width);
+                    n.Neighbors.Add(n.ID - Width, 1);
+
+                // --------- "Cross" neighbours
+                
+                //bottom-right neighbour
+                if (Nodes.ContainsKey(n.ID + Width + 1) && SameRow(n.ID + Width + 1, n.ID + Width))
+                    n.Neighbors.Add(n.ID + Width + 1, 1.4f);
+
+                //bottom-left neighbour
+                if (Nodes.ContainsKey(n.ID + Width - 1) && SameRow(n.ID + Width - 1, n.ID + Width))
+                    n.Neighbors.Add(n.ID + Width - 1, 1.4f);
+
+                //upper-right neighbour
+                if (Nodes.ContainsKey(n.ID - Width + 1) && SameRow(n.ID - Width + 1, n.ID - Width))
+                    n.Neighbors.Add(n.ID - Width + 1, 1.4f);
+
+                //upper-left neighbour
+                if (Nodes.ContainsKey(n.ID - Width - 1) && SameRow(n.ID - Width - 1, n.ID - Width))
+                    n.Neighbors.Add(n.ID - Width - 1, 1.4f);
             }
+        }
+
+        /// <summary>
+        /// Checks if two neighboring nodes are on the same row
+        /// </summary>
+        /// <param name="id1">neighbor node 1 id</param>
+        /// <param name="id2">neighbor node 2 id</param>
+        /// <returns></returns>
+        private bool SameRow(int id1, int id2)
+        {
+            if (Nodes.ContainsKey(id1) && Nodes.ContainsKey(id2))
+            {
+                return Nodes[id1].Location.Y == Nodes[id2].Location.Y;
+            }
+            return false; 
         }
 
         private NodeType ResolveNodeType(char c)

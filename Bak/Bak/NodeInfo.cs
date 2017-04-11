@@ -9,7 +9,7 @@ namespace Bak
     class NodeInfo
     {
         public int Parent { get; set; }
-        public int PathCost { get; set; }
+        public float PathCost { get; set; }
 
         public NodeInfo(int parent, int pathcost)
         {
