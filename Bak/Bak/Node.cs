@@ -39,10 +39,13 @@ namespace Bak
         public Node(GameMap parent, int x, int y, int id, int size, GameMap.NodeType type)
         {
             InitializeComponent();
-
+            
             Location = new Point(x, y);
             ID = id;
             Size = new Size(size, size);
+
+           // Rec = new Rectangle(Location, Size);
+           // Rec.Fill = 
 
             BackColor = ColorPalette.NodeTypeColor[type];
             base.BorderStyle = BorderStyle.None;
@@ -53,6 +56,17 @@ namespace Bak
             Neighbors = new Dictionary<int, float>();
             
             this.MouseDown += Node_MouseDown;
+        }
+
+        internal bool IsHit(int x, int y)
+        {
+            Rectangle rc = new Rectangle(this.Location, this.Size);
+            return rc.Contains(x, y);
+        }
+
+        public void InvokeNodeClick(MouseEventArgs e)
+        {
+            Node_MouseDown(null, e);
         }
 
         private void Node_MouseDown(object sender, MouseEventArgs e)
@@ -136,6 +150,15 @@ namespace Bak
         public bool IsTraversable()
         {
             return Type != GameMap.NodeType.Obstacle; //all traversable and also end/start points count as traversable
+        }
+
+        public void PaintNode(PaintEventArgs e, Rectangle r)
+        {
+            base.OnPaint(e);
+
+            if (this.BorderStyle == BorderStyle.FixedSingle)
+                ControlPaint.DrawBorder(e.Graphics, r, Color.FromArgb(40, 40, 40), ButtonBorderStyle.Solid);
+
         }
 
         protected override void OnPaint(PaintEventArgs e)

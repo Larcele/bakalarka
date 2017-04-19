@@ -46,7 +46,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AbstractionLayer.cs" />
+    <Compile Include="Cluster.cs" />
     <Compile Include="ColorPalette.cs" />
+    <Compile Include="ClusterNode.cs" />
     <Compile Include="MainWindow.cs">
       <SubType>Form</SubType>
     </Compile>

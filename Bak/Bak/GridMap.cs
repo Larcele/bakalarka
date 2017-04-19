@@ -11,10 +11,18 @@ namespace Bak
 {
     public class GridMap : GameMap
     {
-        int SquareSize;
+        bool minSquareSize = true;
+        int squareSize;
+
+        public int SquareSize { get { return squareSize; } }
         public GridMap(MainWindow window, int w, int h) : base(w, h, window)
         {
-            SquareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            squareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            if (minSquareSize && squareSize < 10)
+            {
+                squareSize = 10;
+            }
+
             InitNodes(window);
         }
         public GridMap(MainWindow window, int w, int h, string filename) : base(w,h,window)
@@ -24,28 +32,27 @@ namespace Bak
             h = mapContent.Length;
             Width = w;
             Height = h;
-            SquareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            squareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            if (minSquareSize && squareSize < 10)
+            {
+                squareSize = 10;
+            }
             InitNodes(window, mapContent);
         }
 
         public GridMap(MainWindow window, int w, int h, string[] mapContent) : base(w, h, window)
         {
-            SquareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
-            if (SquareSize < 10)
+            squareSize = w > h ? window.mainPanel.Width / w : window.mainPanel.Height / h;
+            if (minSquareSize && squareSize < 10)
             {
-                SquareSize = 10;
+                squareSize = 10;
             }
             InitNodes(window, mapContent);
         }
 
         public override void DrawAllNodes()
         {
-            foreach (var node in Nodes.Values)
-            {
-                ParentWindow.mainPanel.Controls.Add(node);
-                if (node.ID > 5000)
-                    break;
-            }
+            
         }
 
         public override void InitNodes(MainWindow w)
@@ -54,7 +61,7 @@ namespace Bak
             {
                 for (int j = 0; j < Width; ++j)
                 {
-                    Node n = new Node(this, j * SquareSize, i * SquareSize, NodeIdAssignment, SquareSize, NodeType.Traversable);
+                    Node n = new Node(this, j * squareSize, i * squareSize, NodeIdAssignment, squareSize, NodeType.Traversable);
                     NodeIdAssignment++;
                     Nodes.MapByNodeID(n);
                 }
@@ -69,7 +76,7 @@ namespace Bak
                 for (int j = 0; j < Width; ++j)
                 {
                     NodeType type = ResolveNodeType(mapContent[i][j]);
-                    Node n = new Node(this, j * SquareSize, i * SquareSize, NodeIdAssignment, SquareSize, type);
+                    Node n = new Node(this, j * squareSize, i * squareSize, NodeIdAssignment, squareSize, type);
                     NodeIdAssignment++;
                     Nodes.MapByNodeID(n);
                 }
