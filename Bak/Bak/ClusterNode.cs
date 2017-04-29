@@ -8,7 +8,6 @@ namespace Bak
 {
     public class ClusterNode
     {
-
         int abstractionLayerID;
         int cluster1ID;
         int cluster2ID;

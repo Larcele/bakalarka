@@ -22,6 +22,7 @@ namespace Bak
         public PictureBox mainPanel;
 
         Dictionary<int, AbstractionLayer> HierarchicalGraph = new Dictionary<int, AbstractionLayer>();
+        Dictionary<int, PRAbstractionLayer> PRAstarHierarchy = new Dictionary<int, PRAbstractionLayer>();
 
         BackgroundWorker pathfinder;
 
@@ -217,6 +218,7 @@ namespace Bak
         public void LoadNewMap(string fileName, string[] mapContent)
         {
             HierarchicalGraph.Clear();
+            PRAstarHierarchy.Clear();
 
             int width = mapContent[0].Length;
             int height = mapContent.Length;
@@ -228,6 +230,218 @@ namespace Bak
             editingModesButton_Click(b_nontraversable, null);
 
             BuildHPAClusters();
+            BuildPRAbstractMap();
+        }
+
+        private void BuildPRAbstractMap()
+        {
+            int clusternodeId = 0;
+            PRAbstractionLayer absl = new PRAbstractionLayer(0);
+
+            //find all cliques
+            Dictionary<int, Node> nodes = gMap.Nodes.Where(n => n.Value.Type != GameMap.NodeType.Obstacle)
+                                                    .OrderBy(n => n.Key)
+                                                    .ToDictionary(n => n.Key, n => n.Value);
+
+            //find all 4-cliques
+            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            {
+                if (!nodes.ContainsKey(i)) { continue; }
+
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 4);
+                if (c != null) //4clique that contains nodes[i] exists 
+                {
+                    //raise ID
+                    clusternodeId++;
+
+                    //add clique to abstract layer
+                    absl.AddClusterNode(c);
+
+                    //delete all nodes now contained in the clusernode
+                    foreach (int n in c.innerNodes)
+                    {
+                        nodes.Remove(n);
+                    }
+                }
+            }
+
+            //find all 3-cliques
+            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            {
+                if (!nodes.ContainsKey(i)) { continue; }
+
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 3);
+                if (c != null) //4clique that contains nodes[i] exists 
+                {
+                    //raise ID
+                    clusternodeId++;
+                    //add clique to abstract layer
+                    absl.AddClusterNode(c);
+
+                    //delete all nodes now contained in the clusernode
+                    foreach (int n in c.innerNodes)
+                    {
+                        nodes.Remove(n);
+                    }
+                }
+            }
+
+            //find all 2-cliques
+            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            {
+                if (!nodes.ContainsKey(i)) { continue; }
+
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 2);
+                if (c != null) //4clique that contains nodes[i] exists 
+                {
+                    //raise ID
+                    clusternodeId++;
+                    //add clique to abstract layer
+                    absl.AddClusterNode(c);
+
+                    //delete all nodes now contained in the clusernode
+                    foreach (int n in c.innerNodes)
+                    {
+                        nodes.Remove(n);
+                    }
+                }
+            }
+
+            //add all cliques to abstract graph
+            PRAstarHierarchy.Add(absl.ID, absl);
+
+            //add cluster connections
+            foreach (var c in absl.nodes)
+            {
+                foreach (var c2 in absl.nodes)
+                {
+                    if (c.Value == c2.Value) { continue; }
+
+                    //check if any inner node in c has a neighbor that is c2's inner node
+                    foreach (var n in c.Value.innerNodes)
+                    {
+                        var res = gMap.Nodes[n].Neighbors.Keys.Intersect(c2.Value.innerNodes);
+                        if (res.Count() != 0)
+                        {
+                            //add neighbors (=> create edge)
+                            c.Value.AddNeighbor(c2.Key, c2.Value);// Value.neighbors.Add(c2.Key, c2.Value);
+                            c2.Value.AddNeighbor(c.Key, c.Value);
+
+                        }
+                    }
+
+                }
+            }
+            
+            //build additional layers until a single abstract node is left
+        }
+
+        private PRAClusterNode findNeighborClique(int clusterNodeId, Node n, int cliqueSize)
+        {
+            PRAClusterNode res = null;
+
+            switch (cliqueSize)
+            {
+                case 4:
+                    #region probably deprecated
+                    /*
+                    //upper-right 4square
+                    if (n.AreNeighbors(n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1)
+                        && AreTraversable(n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1))
+                    {
+                        res = new PRAClusterNode(nodeId, new List<int> {n.ID, n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1 });
+                        nodeId++;
+                    }
+
+
+                    //upper-left 4square
+                    else if (n.AreNeighbors(n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1)
+                        && AreTraversable(n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1))
+                    {
+                        res = new PRAClusterNode(nodeId, new List<int> { n.ID, n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1 });
+                        nodeId++;
+                    }
+                    
+                    //lower-left 4square
+                    else if (n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1)
+                        && AreTraversable(n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1))
+                    {
+                        res = new PRAClusterNode(nodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1 });
+                        nodeId++;
+                    }
+                    */
+                    #endregion
+                    
+                    //lower-right 4square
+                    if (n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1)
+                        && AreTraversable(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1 });
+                    }
+
+                    break;
+
+                case 3:
+                    //lower-right 3 (horizontal/vertical)
+                    if (n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
+                        && AreTraversable(n.ID + gMap.Width, n.ID + 1))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                    }
+
+                    //lower-right 3 (horizontal and diagonal)
+                    else if (n.AreNeighbors(n.ID + gMap.Width + 1, n.ID + 1)
+                        && AreTraversable(n.ID + gMap.Width + 1, n.ID + 1))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1, n.ID + 1 });
+                    }
+
+                    //lower-right 3 (vertical and diagonal)
+                    else if (n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
+                        && AreTraversable(n.ID + gMap.Width, n.ID + 1))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                    }
+                    break;
+
+                case 2:
+                    //lower-right horizontal
+                    if (n.AreNeighbors(n.ID + 1)
+                        && AreTraversable(n.ID + 1))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + 1 });
+                    }
+
+                    //lower-right vertical
+                    if (n.AreNeighbors(n.ID + gMap.Width)
+                        && AreTraversable(n.ID + gMap.Width))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
+                    }
+
+                    //lower-right diagonal
+                    if (n.AreNeighbors(n.ID + gMap.Width)
+                        && AreTraversable(n.ID + gMap.Width))
+                    {
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
+                    }
+                    
+                    break;
+            }
+
+            return res;
+        }
+
+        private bool AreTraversable(params int[] vals)
+        {
+            foreach (var n in vals)
+            {
+                if (!gMap.Nodes.ContainsKey(n) || !gMap.Nodes[n].IsTraversable())
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void RemoveMapControls()
@@ -829,6 +1043,7 @@ namespace Bak
         private void newMapMenuItem_Click(object sender, EventArgs e)
         {
             HierarchicalGraph.Clear();
+            PRAstarHierarchy.Clear();
 
             ToolStripMenuItem t = (ToolStripMenuItem)sender;
 
@@ -891,6 +1106,11 @@ namespace Bak
         {
             Manhattan, //H = 1 * (abs(currentX - targetX) + abs(currentY - targetY))
             DiagonalShortcut 
+        }
+
+        private void showPRAClustersToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
         }
     }
 

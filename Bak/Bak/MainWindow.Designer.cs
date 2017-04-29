@@ -37,6 +37,7 @@
             this.x100ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.x200ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.x400ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.x700ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -66,7 +67,7 @@
             this.panel = new System.Windows.Forms.Panel();
             this.label6 = new System.Windows.Forms.Label();
             this.l_pathCost = new System.Windows.Forms.Label();
-            this.x700ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showPRAClustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -81,7 +82,7 @@
             this.clustersToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1090, 29);
+            this.menuStrip1.Size = new System.Drawing.Size(1090, 30);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -106,7 +107,7 @@
             this.x400ToolStripMenuItem,
             this.x700ToolStripMenuItem});
             this.newMapToolStripMenuItem.Name = "newMapToolStripMenuItem";
-            this.newMapToolStripMenuItem.Size = new System.Drawing.Size(194, 28);
+            this.newMapToolStripMenuItem.Size = new System.Drawing.Size(158, 28);
             this.newMapToolStripMenuItem.Text = "New map";
             // 
             // x5ToolStripMenuItem
@@ -157,6 +158,14 @@
             this.x400ToolStripMenuItem.Text = "400x400";
             this.x400ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
             // 
+            // x700ToolStripMenuItem
+            // 
+            this.x700ToolStripMenuItem.Name = "x700ToolStripMenuItem";
+            this.x700ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
+            this.x700ToolStripMenuItem.Tag = "700";
+            this.x700ToolStripMenuItem.Text = "700x700";
+            this.x700ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
+            // 
             // loadMapToolStripMenuItem
             // 
             this.loadMapToolStripMenuItem.Name = "loadMapToolStripMenuItem";
@@ -174,9 +183,10 @@
             // clustersToolStripMenuItem
             // 
             this.clustersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.showHPAClustersToolStripMenuItem});
+            this.showHPAClustersToolStripMenuItem,
+            this.showPRAClustersToolStripMenuItem});
             this.clustersToolStripMenuItem.Name = "clustersToolStripMenuItem";
-            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 25);
+            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 26);
             this.clustersToolStripMenuItem.Text = "Clusters";
             // 
             // showHPAClustersToolStripMenuItem
@@ -262,6 +272,7 @@
             this.c_selectedPathfinding.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.c_selectedPathfinding.FormattingEnabled = true;
             this.c_selectedPathfinding.Items.AddRange(new object[] {
+            "PRA*",
             "HPA* (Manhattan Heuristic)",
             "A* (Manhattan Heuristic)",
             "A* (Diagonal Shortcut)",
@@ -451,13 +462,12 @@
             this.l_pathCost.TabIndex = 21;
             this.l_pathCost.Text = "- - -";
             // 
-            // x700ToolStripMenuItem
+            // showPRAClustersToolStripMenuItem
             // 
-            this.x700ToolStripMenuItem.Name = "x700ToolStripMenuItem";
-            this.x700ToolStripMenuItem.Size = new System.Drawing.Size(194, 28);
-            this.x700ToolStripMenuItem.Tag = "700";
-            this.x700ToolStripMenuItem.Text = "700x700";
-            this.x700ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
+            this.showPRAClustersToolStripMenuItem.Name = "showPRAClustersToolStripMenuItem";
+            this.showPRAClustersToolStripMenuItem.Size = new System.Drawing.Size(228, 28);
+            this.showPRAClustersToolStripMenuItem.Text = "Show PRA* Clusters";
+            this.showPRAClustersToolStripMenuItem.Click += new System.EventHandler(this.showPRAClustersToolStripMenuItem_Click);
             // 
             // MainWindow
             // 
@@ -535,6 +545,7 @@
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label l_pathCost;
         private System.Windows.Forms.ToolStripMenuItem x700ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showPRAClustersToolStripMenuItem;
     }
 }
 

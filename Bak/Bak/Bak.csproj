@@ -65,6 +65,8 @@
       <DependentUpon>Node.cs</DependentUpon>
     </Compile>
     <Compile Include="NodeInfo.cs" />
+    <Compile Include="PRAbstractionLayer.cs" />
+    <Compile Include="PRAClusterNode.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="MainWindow.resx">

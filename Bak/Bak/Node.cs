@@ -147,6 +147,23 @@ namespace Bak
             return res;
         }
 
+        public bool IsNeighbor(int n)
+        {
+            return this.Neighbors.ContainsKey(n);
+        }
+
+        public bool AreNeighbors(params int[] vals)
+        {
+            foreach (var n in vals)
+            {
+                if (!this.Neighbors.ContainsKey(n))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
         public bool IsTraversable()
         {
             return Type != GameMap.NodeType.Obstacle; //all traversable and also end/start points count as traversable
