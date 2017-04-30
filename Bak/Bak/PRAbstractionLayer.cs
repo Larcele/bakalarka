@@ -16,6 +16,10 @@ namespace Bak
             ID = id;
         }
 
+        /// <summary>
+        /// IMPORTANT! this assignes AbstractionLayerID to the node as well
+        /// </summary>
+        /// <param name="node"></param>
         public void AddClusterNode(PRAClusterNode node)
         {
             this.nodes.Add(node.ID, node);

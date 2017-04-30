@@ -238,17 +238,19 @@ namespace Bak
             int clusternodeId = 0;
             PRAbstractionLayer absl = new PRAbstractionLayer(0);
 
-            //find all cliques
+            //filter out all traversable nodes and sort (O(nlogn)
             Dictionary<int, Node> nodes = gMap.Nodes.Where(n => n.Value.Type != GameMap.NodeType.Obstacle)
                                                     .OrderBy(n => n.Key)
                                                     .ToDictionary(n => n.Key, n => n.Value);
 
+            //each is O(n) where n is the number of nodes
+            #region 4-cliques
             //find all 4-cliques
             for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 4);
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 4);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -264,13 +266,15 @@ namespace Bak
                     }
                 }
             }
+            #endregion
 
+            #region 3-cliques
             //find all 3-cliques
             for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 3);
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 3);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -285,13 +289,15 @@ namespace Bak
                     }
                 }
             }
+            #endregion
 
+            #region 2-cliques
             //find all 2-cliques
             for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes[i], 2);
+                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 2);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -306,10 +312,24 @@ namespace Bak
                     }
                 }
             }
+            #endregion
+
+            #region orphan nodes
+            //remaining nodes are orphans. Create remaining PRAClusterNodes from these orphans.
+            foreach (var n in nodes)
+            {
+                PRAClusterNode c = new PRAClusterNode(clusternodeId, new List<int>{ n.Key });
+                //raise ID
+                clusternodeId++;
+                //add clique to abstract layer
+                absl.AddClusterNode(c);
+            }
+            #endregion
 
             //add all cliques to abstract graph
             PRAstarHierarchy.Add(absl.ID, absl);
 
+            #region PRAClusterNode edge creation
             //add cluster connections
             foreach (var c in absl.nodes)
             {
@@ -332,11 +352,143 @@ namespace Bak
 
                 }
             }
-            
+            #endregion
+
             //build additional layers until a single abstract node is left
+            buildPRALayers();
         }
 
-        private PRAClusterNode findNeighborClique(int clusterNodeId, Node n, int cliqueSize)
+        private void buildPRALayers()
+        {
+            //at the start, there is only the first abstraction layer. 
+            //This layer consists of nodes, where a node can contain a 4-clique, 3-clique, 2-clique or be an orphan node.
+            //We continue building layers and abstracting until there is only a single node left.
+
+            int clusternodeId = 0;
+            int currentAbslayerID = 1;
+
+            while (true)
+            {
+                PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
+                PRAbstractionLayer last = PRAstarHierarchy[currentAbslayerID - 1];
+
+                Dictionary<int, PRAClusterNode> resolvedNodes = new Dictionary<int, PRAClusterNode>();
+
+                //extract the nodes of the previous layer and sort them by theeir neighbor count
+                Dictionary<int, PRAClusterNode> nodes = last.nodes.OrderBy(n => n.Value.neighbors.Count)
+                                                                  .ToDictionary(n => n.Key, n => n.Value);
+
+                //a PRAClusterNode *p* is in clique with other PCNs if each of 
+                //the neighbors of *p* contains all other neighbors and also *p*
+                //Example: PCNs 0,2 and 4 are in a clique if  [0] -> [2][4] && [2] -> [0][4] && [4] -> [0][2]
+
+                #region clique building
+                //building 4-cliques, 3-cliques, 2-cliques
+                foreach (var node in nodes)
+                {
+                    if (resolvedNodes.ContainsKey(node.Key)) { continue; }
+
+                    //check for neighbors if they are a clique with node
+                    if (nodesAreClique(node.Value))
+                    {
+                        //create PCN
+                        List<int> innerNodes = new List<int> { node.Key };
+                        innerNodes.AddRange(node.Value.neighbors.Keys);
+                        PRAClusterNode c = new PRAClusterNode(clusternodeId, innerNodes);
+
+                        //raise ID
+                        clusternodeId++;
+                        //add clique to abstract layer
+                        absl.AddClusterNode(c);
+
+                        //mark all nodes now contained in the clusernode as redolved
+                        foreach (int n in c.innerNodes)
+                        {
+                            resolvedNodes.Add(n, last.nodes[n]);
+                        }
+                    }
+                }
+                #endregion
+
+                //building PCNs for this layer is finished. 
+                //Remove all resovled nodes from nodes. The remaining nodes will be orphans.
+                foreach (var n in resolvedNodes)
+                {
+                    nodes.Remove(n.Key);
+                }
+
+                #region orphans
+                //create orphan PCNs 
+                foreach (var n in nodes)
+                {
+                    PRAClusterNode c = new PRAClusterNode(clusternodeId, new List<int> { n.Key });
+                    //raise ID
+                    clusternodeId++;
+                    //add clique to abstract layer
+                    absl.AddClusterNode(c);
+                }
+                #endregion
+
+                #region PRAClusterNode edge creation
+                //add cluster connections
+                foreach (var c in absl.nodes)
+                {
+                    foreach (var c2 in absl.nodes)
+                    {
+                        if (c.Value == c2.Value) { continue; }
+
+                        //check if any inner node in c has a neighbor that is c2's inner node
+                        foreach (var n in c.Value.innerNodes)
+                        {
+                            var res = gMap.Nodes[n].Neighbors.Keys.Intersect(c2.Value.innerNodes);
+                            if (res.Count() != 0)
+                            {
+                                //add neighbors (=> create edge)
+                                c.Value.AddNeighbor(c2.Key, c2.Value);// Value.neighbors.Add(c2.Key, c2.Value);
+                                c2.Value.AddNeighbor(c.Key, c.Value);
+
+                            }
+                        }
+
+                    }
+                }
+                #endregion
+
+                PRAstarHierarchy.Add(currentAbslayerID, absl);
+
+                //building PCN connection and, therefore, this abstraction layer.
+                //check if this abstraction layer contains only a single node.
+                //if it does, finish. if it doesn't, raise the currentAbslayerID, reset the clusterID and loop.
+                if (absl.nodes.Count == 1)
+                {
+                    break;
+                }
+                else
+                {
+                    currentAbslayerID++;
+                    clusternodeId = 0;
+                }
+            }
+        }
+
+        private bool nodesAreClique(PRAClusterNode node)
+        {
+            //Example: PCNs 0,2 and 4 are in a clique if  [0] -> [2][4] && [2] -> [0][4] && [4] -> [0][2]
+
+            foreach (var n in node.neighbors)
+            {
+                List<int> neighborsToCheck = node.neighbors.Where(n1 => n1.Key != n.Key)
+                                                           .Select(n2 => n2.Key).ToList();
+                neighborsToCheck.Add(node.ID);
+                if (!n.Value.HasAllNeighbors(neighborsToCheck))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private PRAClusterNode findNeighborClique(int clusterNodeId, Dictionary<int, Node> nodes, Node n, int cliqueSize)
         {
             PRAClusterNode res = null;
 
@@ -373,7 +525,8 @@ namespace Bak
                     #endregion
                     
                     //lower-right 4square
-                    if (n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1)
+                    if (nonClusteredNodes(nodes, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1) 
+                        && n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1 });
@@ -383,21 +536,24 @@ namespace Bak
 
                 case 3:
                     //lower-right 3 (horizontal/vertical)
-                    if (n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
+                    if (nonClusteredNodes(nodes, n.ID + gMap.Width, n.ID + 1)
+                        && n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + 1))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
                     }
 
                     //lower-right 3 (horizontal and diagonal)
-                    else if (n.AreNeighbors(n.ID + gMap.Width + 1, n.ID + 1)
+                    else if (nonClusteredNodes(nodes, n.ID + gMap.Width + 1, n.ID + 1)
+                        && n.AreNeighbors(n.ID + gMap.Width + 1, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width + 1, n.ID + 1))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1, n.ID + 1 });
                     }
 
                     //lower-right 3 (vertical and diagonal)
-                    else if (n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
+                    else if (nonClusteredNodes(nodes, n.ID + gMap.Width, n.ID + 1)
+                        && n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + 1))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
@@ -406,30 +562,45 @@ namespace Bak
 
                 case 2:
                     //lower-right horizontal
-                    if (n.AreNeighbors(n.ID + 1)
+                    if (nonClusteredNodes(nodes, n.ID + 1)
+                        && n.AreNeighbors(n.ID + 1)
                         && AreTraversable(n.ID + 1))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + 1 });
                     }
 
                     //lower-right vertical
-                    if (n.AreNeighbors(n.ID + gMap.Width)
+                    if (nonClusteredNodes(nodes, n.ID + gMap.Width)
+                        && n.AreNeighbors(n.ID + gMap.Width)
                         && AreTraversable(n.ID + gMap.Width))
                     {
                         res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
                     }
 
                     //lower-right diagonal
-                    if (n.AreNeighbors(n.ID + gMap.Width)
-                        && AreTraversable(n.ID + gMap.Width))
+                    if (nonClusteredNodes(nodes, n.ID + gMap.Width + 1)
+                        && n.AreNeighbors(n.ID + gMap.Width + 1)
+                        && AreTraversable(n.ID + gMap.Width + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
+                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1 });
                     }
                     
                     break;
             }
 
             return res;
+        }
+
+        private bool nonClusteredNodes(Dictionary<int, Node> nonClusteredNodes, params int[] nodes)
+        {
+            foreach (var nodeID in nodes)
+            {
+                if (!nonClusteredNodes.ContainsKey(nodeID))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private bool AreTraversable(params int[] vals)

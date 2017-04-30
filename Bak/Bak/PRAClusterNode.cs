@@ -42,5 +42,17 @@ namespace Bak
                 neighbors.Add(key, value);
             }
         }
+
+        internal bool HasAllNeighbors(List<int> neighbors)
+        {
+            foreach (int n in neighbors)
+            {
+                if (!this.neighbors.ContainsKey(n))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }
