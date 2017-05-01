@@ -117,6 +117,7 @@ namespace Bak
             if (savefileDialog.ShowDialog() == DialogResult.OK)
             {
                 File.WriteAllLines(savefileDialog.FileName, mapContent);
+                this.Text = savefileDialog.FileName;
             }
         }
 
@@ -196,6 +197,7 @@ namespace Bak
 
                 string[] filelines = File.ReadAllLines(fileDialog.FileName);
                 LoadNewMap(fileDialog.FileName, filelines);
+                this.Text = fileDialog.FileName;
                 SetMapSize();
             }
         }
@@ -378,9 +380,10 @@ namespace Bak
                 Dictionary<int, PRAClusterNode> nodes = oneLevelLower.ClusterNodes.OrderBy(n => n.Value.neighbors.Count)
                                                                      .ToDictionary(n => n.Key, n => n.Value);
 
-                //a PRAClusterNode *p* is in clique with other PCNs if each of 
-                //the neighbors of *p* contains all other neighbors and also *p*
+                //a PRAClusterNode *p* is in clique with other PCNs if each of (or a subset of)
+                //the neighbors  of *p* contains all other (or the same subset o ) neighbors and also *p*
                 //Example: PCNs 0,2 and 4 are in a clique if  [0] -> [2][4] && [2] -> [0][4] && [4] -> [0][2]
+                //In the following configuration also i.e {0, 2} are in a clique because [0] -> [2]... && [2] -> [0]... 
 
                 #region clique building
                 //building 4-cliques, 3-cliques, 2-cliques
@@ -391,7 +394,7 @@ namespace Bak
                     //be sure to only make combinations that contains keys that have NOT been resolved already.
                     List<int> nonResovledNeighbors = node.Value.neighbors.Keys.Where(k => !resolvedNodes.ContainsKey(k)).ToList();
 
-                     List <List<int>> nodesToCheckForCliques = GetCombination(nonResovledNeighbors);
+                    List <List<int>> nodesToCheckForCliques = GetCombinations(nonResovledNeighbors);
                     nodesToCheckForCliques = nodesToCheckForCliques.OrderByDescending(n => n.Count).ToList();
 
                     for (int i = 0; i < nodesToCheckForCliques.Count; ++i)
@@ -468,6 +471,13 @@ namespace Bak
 
                 PRAstarHierarchy.Add(currentAbslayerID, currentLevel);
 
+                //if the map has inconvenient properties such as multiple non-reachable areas that 
+                //are already as abstracted as possible, break the while loop
+                if (currentLevel.AllCLustersDisconnected())
+                {
+                    break;
+                }
+                
                 //building PCN connection and, therefore, this abstraction layer.
                 //check if this abstraction layer contains only a single node.
                 //if it does, finish. if it doesn't, raise the currentAbslayerID, reset the clusterID and loop.
@@ -483,7 +493,7 @@ namespace Bak
             }
         }
         
-        static List<List<int>> GetCombination(List<int> list)
+        static List<List<int>> GetCombinations(List<int> list)
         {
             List<List<int>> res = new List<List<int>>();
             int index = 0;
@@ -703,6 +713,10 @@ namespace Bak
                 this.mainPanel.Controls.RemoveAt(0);
                 if (oKill != null)
                     oKill.Dispose();
+            }
+            foreach (Control c in gMap.Nodes.Values)
+            {
+                c.Dispose();
             }
         }
 
@@ -1147,7 +1161,7 @@ namespace Bak
                 }
                 closedList.Add(currNodeID);
                 //calculate F for all neighbors (G + H)
-                Dictionary<int, float> F = new Dictionary<int, float>();
+                Dictionary<int, double> F = new Dictionary<int, double>();
                 foreach (var n in openList)
                 {
                     F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H(n));
@@ -1159,8 +1173,7 @@ namespace Bak
                 //drop the LFN from the open list and add it to the closed list
                 openList.Remove(currNodeID);
                 closedList.Add(currNodeID);
-
-
+                
                 if (currNodeID == gMap.EndNodeID)
                 {
                     break;
@@ -1203,19 +1216,20 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 10 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
 
                 case Heuristic.DiagonalShortcut:
                     int h = 0;
-                    int xDistance = Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X);
-                    int yDistance = Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y);
-                    if (xDistance > yDistance)
-                        h = 14 * yDistance + 10 * (xDistance - yDistance);
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y);
+                    if (dx > dy)
+                        h = 14 * dy + 10 * (dx - dy);
                     else
-                        h = 14 * xDistance + 10 * (yDistance - xDistance);
+                        h = 14 * dx + 10 * (dy - dx);
                     return h;
+
                 default:
-                    return 10 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
 
             }
         }

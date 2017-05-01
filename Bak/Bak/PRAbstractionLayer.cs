@@ -25,5 +25,17 @@ namespace Bak
             this.ClusterNodes.Add(node.ID, node);
             node.abstractionLayerID = this.ID;
         }
+
+        public bool AllCLustersDisconnected()
+        {
+            foreach (var n in ClusterNodes.Values)
+            {
+                if (n.neighbors.Count != 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }
