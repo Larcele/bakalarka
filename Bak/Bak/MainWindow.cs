@@ -331,9 +331,9 @@ namespace Bak
 
             #region PRAClusterNode edge creation
             //add cluster connections
-            foreach (var c in absl.nodes)
+            foreach (var c in absl.ClusterNodes)
             {
-                foreach (var c2 in absl.nodes)
+                foreach (var c2 in absl.ClusterNodes)
                 {
                     if (c.Value == c2.Value) { continue; }
 
@@ -369,14 +369,14 @@ namespace Bak
 
             while (true)
             {
-                PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
-                PRAbstractionLayer last = PRAstarHierarchy[currentAbslayerID - 1];
+                PRAbstractionLayer currentLevel = new PRAbstractionLayer(currentAbslayerID);
+                PRAbstractionLayer oneLevelLower = PRAstarHierarchy[currentAbslayerID - 1];
 
                 Dictionary<int, PRAClusterNode> resolvedNodes = new Dictionary<int, PRAClusterNode>();
 
                 //extract the nodes of the previous layer and sort them by theeir neighbor count
-                Dictionary<int, PRAClusterNode> nodes = last.nodes.OrderBy(n => n.Value.neighbors.Count)
-                                                                  .ToDictionary(n => n.Key, n => n.Value);
+                Dictionary<int, PRAClusterNode> nodes = oneLevelLower.ClusterNodes.OrderBy(n => n.Value.neighbors.Count)
+                                                                     .ToDictionary(n => n.Key, n => n.Value);
 
                 //a PRAClusterNode *p* is in clique with other PCNs if each of 
                 //the neighbors of *p* contains all other neighbors and also *p*
@@ -388,23 +388,34 @@ namespace Bak
                 {
                     if (resolvedNodes.ContainsKey(node.Key)) { continue; }
 
-                    //check for neighbors if they are a clique with node
-                    if (nodesAreClique(node.Value))
+                    //be sure to only make combinations that contains keys that have NOT been resolved already.
+                    List<int> nonResovledNeighbors = node.Value.neighbors.Keys.Where(k => !resolvedNodes.ContainsKey(k)).ToList();
+
+                     List <List<int>> nodesToCheckForCliques = GetCombination(nonResovledNeighbors);
+                    nodesToCheckForCliques = nodesToCheckForCliques.OrderByDescending(n => n.Count).ToList();
+
+                    for (int i = 0; i < nodesToCheckForCliques.Count; ++i)
                     {
-                        //create PCN
-                        List<int> innerNodes = new List<int> { node.Key };
-                        innerNodes.AddRange(node.Value.neighbors.Keys);
-                        PRAClusterNode c = new PRAClusterNode(clusternodeId, innerNodes);
-
-                        //raise ID
-                        clusternodeId++;
-                        //add clique to abstract layer
-                        absl.AddClusterNode(c);
-
-                        //mark all nodes now contained in the clusernode as redolved
-                        foreach (int n in c.innerNodes)
+                        //check for neighbors if they are a clique with node
+                        if (nodesAreClique(oneLevelLower.ID, node.Value, nodesToCheckForCliques[i]))
                         {
-                            resolvedNodes.Add(n, last.nodes[n]);
+                            //create PCN
+                            List<int> innerNodes = new List<int> { node.Key };
+                            innerNodes.AddRange(nodesToCheckForCliques[i]);
+                            PRAClusterNode c = new PRAClusterNode(clusternodeId, innerNodes);
+
+                            //raise ID
+                            clusternodeId++;
+                            //add clique to abstract layer
+                            currentLevel.AddClusterNode(c);
+
+                            //mark all nodes now contained in the clusernode as redolved
+                            foreach (int n in c.innerNodes)
+                            {
+                                resolvedNodes.Add(n, oneLevelLower.ClusterNodes[n]);
+                            }
+                            //stop checking cliques for node
+                            break;
                         }
                     }
                 }
@@ -425,22 +436,23 @@ namespace Bak
                     //raise ID
                     clusternodeId++;
                     //add clique to abstract layer
-                    absl.AddClusterNode(c);
+                    currentLevel.AddClusterNode(c);
                 }
                 #endregion
 
                 #region PRAClusterNode edge creation
                 //add cluster connections
-                foreach (var c in absl.nodes)
+                foreach (var c in currentLevel.ClusterNodes)
                 {
-                    foreach (var c2 in absl.nodes)
+                    foreach (var c2 in currentLevel.ClusterNodes)
                     {
                         if (c.Value == c2.Value) { continue; }
 
                         //check if any inner node in c has a neighbor that is c2's inner node
+                        //=> means that inner nodes are cluster nodes one layer DOWN from abstract layer containing 
                         foreach (var n in c.Value.innerNodes)
                         {
-                            var res = gMap.Nodes[n].Neighbors.Keys.Intersect(c2.Value.innerNodes);
+                            var res = oneLevelLower.ClusterNodes[n].neighbors.Keys.Intersect(c2.Value.innerNodes);
                             if (res.Count() != 0)
                             {
                                 //add neighbors (=> create edge)
@@ -454,12 +466,12 @@ namespace Bak
                 }
                 #endregion
 
-                PRAstarHierarchy.Add(currentAbslayerID, absl);
+                PRAstarHierarchy.Add(currentAbslayerID, currentLevel);
 
                 //building PCN connection and, therefore, this abstraction layer.
                 //check if this abstraction layer contains only a single node.
                 //if it does, finish. if it doesn't, raise the currentAbslayerID, reset the clusterID and loop.
-                if (absl.nodes.Count == 1)
+                if (currentLevel.ClusterNodes.Count == 1)
                 {
                     break;
                 }
@@ -470,22 +482,89 @@ namespace Bak
                 }
             }
         }
-
-        private bool nodesAreClique(PRAClusterNode node)
+        
+        static List<List<int>> GetCombination(List<int> list)
         {
-            //Example: PCNs 0,2 and 4 are in a clique if  [0] -> [2][4] && [2] -> [0][4] && [4] -> [0][2]
+            List<List<int>> res = new List<List<int>>();
+            int index = 0;
 
-            foreach (var n in node.neighbors)
+            double count = Math.Pow(2, list.Count);
+            for (int i = 1; i <= count - 1; i++)
             {
-                List<int> neighborsToCheck = node.neighbors.Where(n1 => n1.Key != n.Key)
-                                                           .Select(n2 => n2.Key).ToList();
-                neighborsToCheck.Add(node.ID);
-                if (!n.Value.HasAllNeighbors(neighborsToCheck))
+                string str = Convert.ToString(i, 2).PadLeft(list.Count, '0');
+                for (int j = 0; j < str.Length; j++)
                 {
-                    return false;
+                    if (str[j] == '1')
+                    {
+                        if (index >= res.Count)
+                        {
+                            res.Add(new List<int> { list[j] });
+                        }
+                        else
+                        {
+                            res[index].Add(list[j]);
+                        }
+                    }
                 }
+                index++;
             }
-            return true;
+            return res;
+        }
+
+        /// <summary>
+        /// Determines whenever the nodes are in a clique with node
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="nodes"></param>
+        /// <returns></returns>
+        private bool nodesAreClique(int aLayerID, PRAClusterNode node, List<int> nodes)
+        {
+            //check for 2-clique
+            if (nodes.Count == 1)
+            {
+                // if [0] -> [2]... then also [2] -> [0]... must be true; Then they are a 2-clique
+                if (node.HasNeighbor(nodes[0]) && PRAstarHierarchy[aLayerID].ClusterNodes[nodes[0]].HasNeighbor(node.ID))
+                {
+                    return true;
+                }
+                else { return false; }
+            }
+
+            //check for 3-clique and 4-clique
+            else //nodes are of size 2 to 3
+            {
+                //Example: nodes 0,2 and 4 are in a clique if  [0] -> {2,4} && [2] -> {0, 4} && [4] -> {0, 2}
+                foreach (var n in nodes)
+                {
+                    //according to prev. example, let's say node is 0 and n is 2.
+                    //the aim for neighborsToCheckis to be {4, 0} and then evaluate if n has both 4 and 0 as neighbors.
+                    //if it does, in the same way we check if {0, 2} are neighbors of 4. If they are, {0, 2, 4} are a clique.
+                    List<int> neighborsToCheck = nodes.Where(n1 => n1 != n)
+                                                      .Select(n1 => n1).ToList();
+
+                    neighborsToCheck.Add(node.ID);
+                    if (!PRAstarHierarchy[aLayerID].ClusterNodes[n].HasAllNeighbors(neighborsToCheck))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+
+                #region deprecated
+                /*foreach (var n in node.neighbors)
+                {
+                    List<int> neighborsToCheck = node.neighbors.Where(n1 => n1.Key != n.Key)
+                                                               .Select(n2 => n2.Key).ToList();
+                    neighborsToCheck.Add(node.ID);
+                    if (!n.Value.HasAllNeighbors(neighborsToCheck))
+                    {
+                        return false;
+                    }
+                }
+                return true;*/
+                #endregion
+            }
+            
         }
 
         private PRAClusterNode findNeighborClique(int clusterNodeId, Dictionary<int, Node> nodes, Node n, int cliqueSize)

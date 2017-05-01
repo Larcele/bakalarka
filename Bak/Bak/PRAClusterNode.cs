@@ -43,6 +43,11 @@ namespace Bak
             }
         }
 
+        internal bool HasNeighbor(int nodeID)
+        {
+            return this.neighbors.ContainsKey(nodeID);
+        }
+
         internal bool HasAllNeighbors(List<int> neighbors)
         {
             foreach (int n in neighbors)

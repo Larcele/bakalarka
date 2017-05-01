@@ -9,7 +9,7 @@ namespace Bak
     public class PRAbstractionLayer
     {
         public int ID;
-        public Dictionary<int, PRAClusterNode> nodes = new Dictionary<int, PRAClusterNode>();
+        public Dictionary<int, PRAClusterNode> ClusterNodes = new Dictionary<int, PRAClusterNode>();
 
         public PRAbstractionLayer(int id)
         {
@@ -22,7 +22,7 @@ namespace Bak
         /// <param name="node"></param>
         public void AddClusterNode(PRAClusterNode node)
         {
-            this.nodes.Add(node.ID, node);
+            this.ClusterNodes.Add(node.ID, node);
             node.abstractionLayerID = this.ID;
         }
     }
