@@ -15,15 +15,10 @@ namespace Bak
         {
             ID = id;
         }
-
-        /// <summary>
-        /// IMPORTANT! this assignes AbstractionLayerID to the node as well
-        /// </summary>
-        /// <param name="node"></param>
+        
         public void AddClusterNode(PRAClusterNode node)
         {
             this.ClusterNodes.Add(node.ID, node);
-            node.abstractionLayerID = this.ID;
         }
 
         public bool AllCLustersDisconnected()

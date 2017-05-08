@@ -43,14 +43,16 @@ namespace Bak
                 ControlStyles.DoubleBuffer,
                 true);
 
+            this.Width = 1120;
+            this.Height = 750;
 
             c_selectedPathfinding.SelectedIndex = 0;
             pathLed.BackColor = ColorPalette.NodeColor_Path;
             visitedLed.BackColor = ColorPalette.NodeColor_Visited;
 
             mainPanel = pictureBox1;
-            //mainPanel.Width = 1280;
-            //mainPanel.Height = 600;
+            mainPanel.Width = 600;
+            mainPanel.Height = 600;
 
             //mainPanel.AutoScroll = true;
 
@@ -59,6 +61,7 @@ namespace Bak
 
             
             gMap = new GridMap(this, 5, 5, FilePath);
+            SetMapSize();
             this.Text = FilePath;
 
             RedrawMap();
@@ -86,6 +89,7 @@ namespace Bak
 
             Invalidate();
             mainPanel.Invalidate();
+            
         }
 
         private void MainPanel_Paint(object sender, PaintEventArgs e)
@@ -214,6 +218,9 @@ namespace Bak
             {
                 mainPanel.Width = gMap.Width * ((GridMap)gMap).SquareSize;
                 mainPanel.Height = gMap.Height * ((GridMap)gMap).SquareSize;
+
+                panel.Width = mainPanel.Width;
+                panel.Height = mainPanel.Height;
             }
         }
 
@@ -238,7 +245,8 @@ namespace Bak
         private void BuildPRAbstractMap()
         {
             int clusternodeId = 0;
-            PRAbstractionLayer absl = new PRAbstractionLayer(0);
+            int currentAbslayerID = 0;
+            PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
 
             //filter out all traversable nodes and sort (O(nlogn)
             Dictionary<int, Node> nodes = gMap.Nodes.Where(n => n.Value.Type != GameMap.NodeType.Obstacle)
@@ -252,7 +260,7 @@ namespace Bak
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 4);
+                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 4);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -276,7 +284,7 @@ namespace Bak
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 3);
+                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 3);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -299,7 +307,7 @@ namespace Bak
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(clusternodeId, nodes, nodes[i], 2);
+                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 2);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
@@ -320,15 +328,18 @@ namespace Bak
             //remaining nodes are orphans. Create remaining PRAClusterNodes from these orphans.
             foreach (var n in nodes)
             {
-                PRAClusterNode c = new PRAClusterNode(clusternodeId, new List<int>{ n.Key });
+                PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, new List<int>{ n.Key });
+                c.calculateXY(gMap.Nodes);
+                c.InitPRAClusterParents(gMap.Nodes);
                 //raise ID
                 clusternodeId++;
                 //add clique to abstract layer
                 absl.AddClusterNode(c);
+
             }
             #endregion
 
-            //add all cliques to abstract graph
+            //add the abstract layer to abstraction hierarchy
             PRAstarHierarchy.Add(absl.ID, absl);
 
             #region PRAClusterNode edge creation
@@ -356,7 +367,7 @@ namespace Bak
             }
             #endregion
 
-            //build additional layers until a single abstract node is left
+            //build additional layers until a single abstract node is left for each non-disconnected map space
             buildPRALayers();
         }
 
@@ -376,7 +387,7 @@ namespace Bak
 
                 Dictionary<int, PRAClusterNode> resolvedNodes = new Dictionary<int, PRAClusterNode>();
 
-                //extract the nodes of the previous layer and sort them by theeir neighbor count
+                //extract the nodes of the previous layer and sort them by their neighbor count
                 Dictionary<int, PRAClusterNode> nodes = oneLevelLower.ClusterNodes.OrderBy(n => n.Value.neighbors.Count)
                                                                      .ToDictionary(n => n.Key, n => n.Value);
 
@@ -405,7 +416,9 @@ namespace Bak
                             //create PCN
                             List<int> innerNodes = new List<int> { node.Key };
                             innerNodes.AddRange(nodesToCheckForCliques[i]);
-                            PRAClusterNode c = new PRAClusterNode(clusternodeId, innerNodes);
+                            PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, innerNodes);
+                            c.calculateXY(oneLevelLower);
+                            c.setParentToAllInnerNodes(oneLevelLower);
 
                             //raise ID
                             clusternodeId++;
@@ -435,7 +448,10 @@ namespace Bak
                 //create orphan PCNs 
                 foreach (var n in nodes)
                 {
-                    PRAClusterNode c = new PRAClusterNode(clusternodeId, new List<int> { n.Key });
+                    PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, new List<int> { n.Key });
+                    c.calculateXY(oneLevelLower);
+                    c.setParentToAllInnerNodes(oneLevelLower);
+
                     //raise ID
                     clusternodeId++;
                     //add clique to abstract layer
@@ -577,7 +593,7 @@ namespace Bak
             
         }
 
-        private PRAClusterNode findNeighborClique(int clusterNodeId, Dictionary<int, Node> nodes, Node n, int cliqueSize)
+        private PRAClusterNode findNeighborClique(int absLayerID, int clusterNodeId, Dictionary<int, Node> nodes, Node n, int cliqueSize)
         {
             PRAClusterNode res = null;
 
@@ -618,7 +634,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
 
                     break;
@@ -629,7 +647,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
 
                     //lower-right 3 (horizontal and diagonal)
@@ -637,7 +657,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width + 1, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width + 1, n.ID + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1, n.ID + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1, n.ID + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
 
                     //lower-right 3 (vertical and diagonal)
@@ -645,7 +667,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width, n.ID + 1)
                         && AreTraversable(n.ID + gMap.Width, n.ID + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
                     break;
 
@@ -655,7 +679,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + 1)
                         && AreTraversable(n.ID + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
 
                     //lower-right vertical
@@ -663,7 +689,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width)
                         && AreTraversable(n.ID + gMap.Width))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
 
                     //lower-right diagonal
@@ -671,7 +699,9 @@ namespace Bak
                         && n.AreNeighbors(n.ID + gMap.Width + 1)
                         && AreTraversable(n.ID + gMap.Width + 1))
                     {
-                        res = new PRAClusterNode(clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1 });
+                        res = new PRAClusterNode(absLayerID, clusterNodeId, new List<int> { n.ID, n.ID + gMap.Width + 1 });
+                        res.calculateXY(gMap.Nodes);
+                        res.InitPRAClusterParents(gMap.Nodes);
                     }
                     
                     break;
@@ -772,6 +802,8 @@ namespace Bak
             PathfindingSolution.Clear();
             searchedNodes.Clear();
 
+            b_mapRefresh.PerformClick();
+
             if (gMap.StartNodeID == -1 || gMap.EndNodeID == -1)
             {
                 MessageBox.Show("Please set start and end node on map before search.");
@@ -787,6 +819,13 @@ namespace Bak
             stopWatch.Start();
             switch ((string)c_selectedPathfinding.SelectedItem)
             {
+                case "PRA* (Manhattan heuristic)":
+                    heuristic = Heuristic.Manhattan;
+                    pathfinder.DoWork += StartPRAstarSearch;
+                    pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
+                    pathfinder.RunWorkerAsync();
+
+                    break;
                 case "HPA* (Manhattan Heuristic)":
                     pathfinder.DoWork += StartHPAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
@@ -845,6 +884,173 @@ namespace Bak
         private void EnablePathFindingdControls()
         {
             b_startPathFinding.Enabled = true;
+        }
+        
+        /// <summary>
+        /// determines the ID of a cluster to which a node belongs on a given abstraction layer.
+        /// IMPORTANT: nodeID is the id of a *node*, NOT a (PRA)ClusterNode.
+        /// </summary>
+        /// <param name="abslayerID"></param>
+        /// <returns></returns>
+        public PRAClusterNode ClusterParent(int nodeID, int abslayerID)
+        {
+            if (abslayerID >= PRAstarHierarchy.Count)
+            {
+                throw new IndexOutOfRangeException("Abstraction layer ID is out of range.");
+            }
+
+            //starts form the bottom layer; zero
+            int currentLayerCluster = gMap.Nodes[nodeID].PRAClusterParent;
+            int currLayer = 0;
+
+            while (currLayer != abslayerID)
+            {
+                currentLayerCluster = PRAstarHierarchy[currLayer].ClusterNodes[currentLayerCluster].PRAClusterParent;
+                currLayer++;
+            }
+
+            return PRAstarHierarchy[currLayer].ClusterNodes[currentLayerCluster];
+        }
+
+        private void StartPRAstarSearch(object sender, DoWorkEventArgs e)
+        {
+            int layerCount = PRAstarHierarchy.Count;
+
+            int startingLayer = layerCount / 2;
+
+            //make an abstract path on startingLayer using A*
+            List<int> abstractPath = RefinePath(startingLayer);
+            
+            for (int level = startingLayer-1; level >= 0; level--)
+             {
+                //refine path to lower levels
+                abstractPath = RefinePath(level);
+             }
+
+            PathfindingSolution.AddRange(abstractPath);
+
+
+
+            pathfinder.CancelAsync();
+
+        }
+
+        private List<int> RefinePath(int startingLayer)
+        {
+            List<int> path = new List<int>();
+
+            PRAClusterNode startnodeCluster = ClusterParent(gMap.StartNodeID, startingLayer);
+            PRAClusterNode endnodeCluster = ClusterParent(gMap.EndNodeID, startingLayer);
+
+            path = AstarAbstractionSearch(startnodeCluster, endnodeCluster, PRAstarHierarchy[startingLayer]);
+
+            return path;
+
+        }
+
+        private List<int> AstarAbstractionSearch(PRAClusterNode start, PRAClusterNode end, PRAbstractionLayer layer)
+        {
+            List<int> sol = new List<int>();
+
+            List<int> closedList = new List<int>();
+            List<int> openList = new List<int>();
+
+            Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
+
+            //init the distances to each node from the starting node
+            foreach (var cnodeID in layer.ClusterNodes)
+            {
+                shortestDist.Add(cnodeID.Key, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+            }
+            shortestDist[start.ID] = new NodeInfo(0, 0);
+
+
+            int currNodeID = start.ID;
+            openList.Add(currNodeID);
+            while (openList.Count > 0)
+            {
+                //add all neighbors into the open list
+                foreach (var n in layer.ClusterNodes[currNodeID].neighbors)
+                {
+                    if (closedList.Contains(n.Key))
+                    {
+                        continue;
+                    }
+
+                    if (!openList.Contains(n.Key))
+                    {
+                        openList.Add(n.Key);
+                        searchedNodes.Add(n.Key);
+                    }
+
+                    //setting Parent
+                    if (shortestDist[n.Key].Parent == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                    }
+                    
+                    //check if the path for neighbor would be shorter if the path went through current node
+                    //if yes, set neighbor's new parent and new pathcost
+                    else if (shortestDist[n.Key].PathCost + layer.ClusterNodes[currNodeID].neighborDist[n.Key] < shortestDist[n.Key].PathCost)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + layer.ClusterNodes[currNodeID].neighborDist[n.Key];
+                        continue;
+                    }
+
+                    //setting pathCost
+                    if (shortestDist[n.Key].PathCost == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].PathCost = layer.ClusterNodes[n.Key].neighborDist[currNodeID];// n.Value;
+                    }
+                    else
+                    {
+                        shortestDist[n.Key].PathCost += layer.ClusterNodes[n.Key].neighborDist[currNodeID];
+                    }
+                }
+                closedList.Add(currNodeID);
+                //calculate F for all neighbors (G + H)
+                Dictionary<int, double> F = new Dictionary<int, double>();
+                foreach (var n in openList)
+                {
+                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H_PRA(n, layer, end));
+                }
+                
+                //choose the lowest F node (LFN)  (O(n))
+                currNodeID = F.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
+
+                //drop the LFN from the open list and add it to the closed list
+                openList.Remove(currNodeID);
+                closedList.Add(currNodeID);
+
+                if (currNodeID == end.ID)
+                {
+                    break;
+                }
+            }
+
+            //paint path
+            /*foreach (var id in searchedNodes)
+            {
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
+            }*/
+
+            int parentID = end.ID;
+            while (parentID != start.ID)
+            {
+                parentID = shortestDist[parentID].Parent;
+                pathCost += shortestDist[parentID].PathCost;
+
+                if (parentID == Int32.MaxValue)
+                {
+                    break;
+                }
+
+                //gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
+                sol.Add(parentID);
+            }
+
+            return sol;
         }
 
         private void StartHPAstarSearch(object sender, DoWorkEventArgs e)
@@ -1234,6 +1440,36 @@ namespace Bak
             }
         }
 
+        /// <summary>
+        /// Heuristic function for PRA* abstract search
+        /// </summary>
+        /// <param name="n"></param>
+        /// <param name="layer"></param>
+        /// <param name="end"></param>
+        /// <returns></returns>
+        private float H_PRA(int n, PRAbstractionLayer layer, PRAClusterNode end)
+        {
+            switch (heuristic)
+            {
+                case Heuristic.Manhattan:
+                    return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
+
+                case Heuristic.DiagonalShortcut:
+                    int h = 0;
+                    int dx = Math.Abs(layer.ClusterNodes[n].X - end.X);
+                    int dy = Math.Abs(layer.ClusterNodes[n].Y - end.Y);
+                    if (dx > dy)
+                        h = 14 * dy + 10 * (dx - dy);
+                    else
+                        h = 14 * dx + 10 * (dy - dx);
+                    return h;
+
+                default:
+                    return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
+
+            }
+        }
+
         private void StartBackTrackSearch(object sender, DoWorkEventArgs e)
         {
             List<int> path = new List<int>();
@@ -1301,7 +1537,8 @@ namespace Bak
 
         private void MainWindow_Resize(object sender, EventArgs e)
         {
-
+            panel.Height = Convert.ToInt32(this.Height * 0.7);
+            panel.Width = Convert.ToInt32(this.Width * 0.9);
         }
 
         private void newMapMenuItem_Click(object sender, EventArgs e)

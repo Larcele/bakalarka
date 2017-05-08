@@ -13,6 +13,7 @@ namespace Bak
     public partial class Node : UserControl
     {
         public int ID { get; private set; }
+        public int PRAClusterParent { get; private set; }
         public GameMap.NodeType Type { get; set; }
 
         /// <summary>
@@ -185,6 +186,12 @@ namespace Bak
             if (this.BorderStyle == BorderStyle.FixedSingle)
                 ControlPaint.DrawBorder(e.Graphics, this.ClientRectangle, Color.FromArgb(40, 40, 40), ButtonBorderStyle.Solid);
         }
+
+        public void InitNodePRAClusterParent(int id)
+        {
+            PRAClusterParent = id;
+        }
+
     }
     public class NodeCollection : Dictionary<int, Node>
     {

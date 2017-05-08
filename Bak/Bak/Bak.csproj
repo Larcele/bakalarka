@@ -96,9 +96,21 @@
     <None Include="GMaps\map01.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="GMaps\map02.gmap" />
-    <None Include="GMaps\map03.gmap" />
-    <None Include="GMaps\map04.gmap" />
+    <None Include="GMaps\map02.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\map03.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\map04.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\map05.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\map06.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="GMaps\simple.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
