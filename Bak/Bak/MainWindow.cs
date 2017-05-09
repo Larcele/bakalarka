@@ -927,12 +927,37 @@ namespace Bak
                 abstractPath = RefinePath(level);
              }
 
-            PathfindingSolution.AddRange(abstractPath);
+            //goes through the low-level clusters and partially builds a path on the grid base.
+            //abstractPath contains the indices of low-level clusters. Therefore,
+            //by doing PRAstarHierarchy[0].ClusterNodes[i] we get the cluster we need
+            int startID = gMap.StartNodeID;
+            for (int i = abstractPath.Count - 1; i > 0 ; --i)
+            {
+                List<int> partialPath = new List<int>();
 
+                partialPath = AstarLowestLevelSearch(PRAstarHierarchy[0].ClusterNodes[abstractPath[i]],
+                                                     PRAstarHierarchy[0].ClusterNodes[abstractPath[i - 1]],
+                                                     startID);
 
+                AddToPathfSol(partialPath);
 
+                //the next start node is going to be the end node of this search. 
+                //since A* path returned is reversed, the first element was the last (end) node.
+                startID = partialPath[0];
+                
+            }
+            
             pathfinder.CancelAsync();
 
+        }
+
+        private void AddToPathfSol(List<int> partialPath)
+        {
+            //since A* traces the path from the end to start by assigned parent nodes, we need to reverse it.
+            for (int i = partialPath.Count - 1; i >= 0; i--)
+            {
+                PathfindingSolution.Add(partialPath[i]);
+            }
         }
 
         private List<int> RefinePath(int startingLayer)
@@ -945,6 +970,129 @@ namespace Bak
             path = AstarAbstractionSearch(startnodeCluster, endnodeCluster, PRAstarHierarchy[startingLayer]);
 
             return path;
+
+        }
+
+        /// <summary>
+        /// This runs A* assuming that both start and nextDestination 
+        /// clusters are clusters belonging to the lowest level of abstraction.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="nextDestination"></param>
+        /// <returns></returns>
+        private List<int> AstarLowestLevelSearch(PRAClusterNode start, PRAClusterNode nextDestination, int startPosition)
+        {
+            List<int> nodesToSearch = new List<int>();
+            nodesToSearch.AddRange(start.innerNodes);
+            nodesToSearch.AddRange(nextDestination.innerNodes);
+            
+            List<int> sol = new List<int>();
+
+            List<int> closedList = new List<int>();
+            List<int> openList = new List<int>();
+
+            Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
+
+            //init the distances to each node from the starting node
+            foreach (var nodeID in nodesToSearch)
+            {
+                shortestDist.Add(nodeID, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+            }
+            shortestDist[startPosition] = new NodeInfo(0, 0);
+            
+            int currNodeID = startPosition;
+            openList.Add(currNodeID);
+            while (openList.Count > 0)
+            {
+                //add all neighbors into the open list
+                foreach (var n in gMap.Nodes[currNodeID].Neighbors)
+                {
+                    if (closedList.Contains(n.Key) 
+                        || (!start.innerNodes.Contains(n.Key) && !nextDestination.innerNodes.Contains(n.Key) ) )
+                    {
+                        continue;
+                    }
+
+                    if (!openList.Contains(n.Key))
+                    {
+                        openList.Add(n.Key);
+                        searchedNodes.Add(n.Key);
+                    }
+
+                    //setting Parent
+                    if (shortestDist[n.Key].Parent == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                    }
+
+                    //check if the path for neighbor would be shorter if the path went through current node
+                    //if yes, set neighbor's new parent and new pathcost
+                    else if (shortestDist[n.Key].PathCost + gMap.Nodes[currNodeID].Neighbors[n.Key] < shortestDist[n.Key].PathCost)
+                    {
+                        shortestDist[n.Key].Parent = currNodeID;
+                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + gMap.Nodes[currNodeID].Neighbors[n.Key];
+                        continue;
+                    }
+
+                    //setting pathCost
+                    if (shortestDist[n.Key].PathCost == Int32.MaxValue)
+                    {
+                        shortestDist[n.Key].PathCost = gMap.Nodes[n.Key].Neighbors[currNodeID];// n.Value;
+                    }
+                    else
+                    {
+                        shortestDist[n.Key].PathCost += gMap.Nodes[n.Key].Neighbors[currNodeID];
+                    }
+                }
+                closedList.Add(currNodeID);
+                //calculate F for all neighbors (G + H)
+                Dictionary<int, double> F = new Dictionary<int, double>();
+                foreach (var n in openList)
+                {
+                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H_lowPRA(n, nextDestination));
+                }
+
+                //choose the lowest F node (LFN)  (O(n))
+                currNodeID = F.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
+
+                //drop the LFN from the open list and add it to the closed list
+                openList.Remove(currNodeID);
+                closedList.Add(currNodeID);
+
+                if (nextDestination.innerNodes.Contains(currNodeID))
+                {
+                    break;
+                }
+            }
+
+            //paint path
+            foreach (var id in searchedNodes)
+            {
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
+            }
+
+            int parentID = currNodeID;
+
+            //add the end node to path
+            pathCost += shortestDist[parentID].PathCost;
+            sol.Add(parentID); 
+
+            //trace the rest of the path to start
+            while (parentID != startPosition)
+            {
+                parentID = shortestDist[parentID].Parent;
+                pathCost += shortestDist[parentID].PathCost;
+
+                if (parentID == Int32.MaxValue)
+                {
+                    break;
+                }
+
+                gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
+                sol.Add(parentID);
+            }
+
+            return sol;
 
         }
 
@@ -967,7 +1115,10 @@ namespace Bak
 
             int currNodeID = start.ID;
             openList.Add(currNodeID);
-            while (openList.Count > 0)
+
+            //since we know that a path exist between start and end cluster, 
+            //we can be sure this loop will break when a path is found.
+            while (true) 
             {
                 //add all neighbors into the open list
                 foreach (var n in layer.ClusterNodes[currNodeID].neighbors)
@@ -980,7 +1131,6 @@ namespace Bak
                     if (!openList.Contains(n.Key))
                     {
                         openList.Add(n.Key);
-                        searchedNodes.Add(n.Key);
                     }
 
                     //setting Parent
@@ -1029,24 +1179,16 @@ namespace Bak
                 }
             }
 
-            //paint path
-            /*foreach (var id in searchedNodes)
-            {
-                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
-            }*/
-
             int parentID = end.ID;
             while (parentID != start.ID)
             {
                 parentID = shortestDist[parentID].Parent;
-                pathCost += shortestDist[parentID].PathCost;
+                //pathCost += shortestDist[parentID].PathCost;
 
                 if (parentID == Int32.MaxValue)
                 {
                     break;
                 }
-
-                //gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
                 sol.Add(parentID);
             }
 
@@ -1436,6 +1578,35 @@ namespace Bak
 
                 default:
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
+
+            }
+        }
+
+        /// <summary>
+        /// Calculates the distance from a low-level node to an estimated next cluster
+        /// </summary>
+        /// <param name="n"></param>
+        /// <param name="end"></param>
+        /// <returns></returns>
+        private float H_lowPRA(int n, PRAClusterNode end)
+        {
+            switch (heuristic)
+            {
+                case Heuristic.Manhattan:
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - end.X) + Math.Abs(gMap.Nodes[n].Location.Y - end.Y));
+
+                case Heuristic.DiagonalShortcut:
+                    int h = 0;
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X - end.X);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - end.Y);
+                    if (dx > dy)
+                        h = 14 * dy + 10 * (dx - dy);
+                    else
+                        h = 14 * dx + 10 * (dy - dx);
+                    return h;
+
+                default:
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - end.X) + Math.Abs(gMap.Nodes[n].Location.Y - end.Y));
 
             }
         }
