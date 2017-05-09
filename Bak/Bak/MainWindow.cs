@@ -274,28 +274,37 @@ namespace Bak
                     {
                         nodes.Remove(n);
                     }
+
+                    if (nodes.Count == 0)
+                    { break; }
                 }
             }
             #endregion
 
             #region 3-cliques
             //find all 3-cliques
-            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            if (nodes.Count > 0)
             {
-                if (!nodes.ContainsKey(i)) { continue; }
-
-                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 3);
-                if (c != null) //4clique that contains nodes[i] exists 
+                for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
                 {
-                    //raise ID
-                    clusternodeId++;
-                    //add clique to abstract layer
-                    absl.AddClusterNode(c);
+                    if (!nodes.ContainsKey(i)) { continue; }
 
-                    //delete all nodes now contained in the clusernode
-                    foreach (int n in c.innerNodes)
+                    PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 3);
+                    if (c != null) //4clique that contains nodes[i] exists 
                     {
-                        nodes.Remove(n);
+                        //raise ID
+                        clusternodeId++;
+                        //add clique to abstract layer
+                        absl.AddClusterNode(c);
+
+                        //delete all nodes now contained in the clusernode
+                        foreach (int n in c.innerNodes)
+                        {
+                            nodes.Remove(n);
+                        }
+
+                        if (nodes.Count == 0)
+                        { break; }
                     }
                 }
             }
@@ -303,22 +312,28 @@ namespace Bak
 
             #region 2-cliques
             //find all 2-cliques
-            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            if (nodes.Count > 0)
             {
-                if (!nodes.ContainsKey(i)) { continue; }
-
-                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 2);
-                if (c != null) //4clique that contains nodes[i] exists 
+                for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
                 {
-                    //raise ID
-                    clusternodeId++;
-                    //add clique to abstract layer
-                    absl.AddClusterNode(c);
+                    if (!nodes.ContainsKey(i)) { continue; }
 
-                    //delete all nodes now contained in the clusernode
-                    foreach (int n in c.innerNodes)
+                    PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 2);
+                    if (c != null) //4clique that contains nodes[i] exists 
                     {
-                        nodes.Remove(n);
+                        //raise ID
+                        clusternodeId++;
+                        //add clique to abstract layer
+                        absl.AddClusterNode(c);
+
+                        //delete all nodes now contained in the clusernode
+                        foreach (int n in c.innerNodes)
+                        {
+                            nodes.Remove(n);
+                        }
+
+                        if (nodes.Count == 0)
+                        { break; }
                     }
                 }
             }

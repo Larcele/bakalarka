@@ -111,6 +111,9 @@
     <None Include="GMaps\map06.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="GMaps\map07.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="GMaps\simple.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
