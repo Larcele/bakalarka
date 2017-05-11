@@ -972,7 +972,7 @@ namespace Bak
         private void StartPRAstarSearch(object sender, DoWorkEventArgs e)
         {
             //first we check if the start and end node are in the same cluster on the highet level.
-            //if they are not, there is no path between them
+            //if they are not, there is no path between them.
             if (ClusterParent(gMap.StartNodeID, PRAstarHierarchy.Count - 1) != ClusterParent(gMap.EndNodeID, PRAstarHierarchy.Count - 1))
             {
                 return;
@@ -983,14 +983,19 @@ namespace Bak
             int startingLayer = layerCount / 2;
 
             //make an abstract path on startingLayer using A*
-            List<int> abstractPath = RefinePath(startingLayer);
-           // List<int> nodesToSearch
-            
+            List<int> abstractPath = RefinePath(startingLayer, PRAstarHierarchy[startingLayer].ClusterNodes);
+            Dictionary<int, PRAClusterNode> nodesToSearch = GetOneLevelLowerClusterNodes(abstractPath, startingLayer);
+
             for (int level = startingLayer-1; level >= 0; level--)
              {
                 //refine path to lower levels
-                abstractPath = RefinePath(level);
-             }
+                abstractPath = RefinePath(level, nodesToSearch);
+
+                if (level > 0)
+                {
+                    nodesToSearch = GetOneLevelLowerClusterNodes(abstractPath, level);
+                }
+            }
 
             //goes through the low-level clusters and partially builds a path on the grid base.
             //abstractPath contains the indices of low-level clusters. Therefore,
@@ -1027,14 +1032,14 @@ namespace Bak
             }
         }
 
-        private List<int> RefinePath(int startingLayer)
+        private List<int> RefinePath(int startingLayer, Dictionary<int, PRAClusterNode> nodesToSearch)
         {
             List<int> path = new List<int>();
 
             PRAClusterNode startnodeCluster = ClusterParent(gMap.StartNodeID, startingLayer);
             PRAClusterNode endnodeCluster = ClusterParent(gMap.EndNodeID, startingLayer);
 
-            path = AstarAbstractionSearch(startnodeCluster, endnodeCluster, PRAstarHierarchy[startingLayer]);
+            path = AstarAbstractionSearch(startnodeCluster, endnodeCluster, PRAstarHierarchy[startingLayer], nodesToSearch);
 
             return path;
 
@@ -1163,7 +1168,7 @@ namespace Bak
 
         }
 
-        private List<int> AstarAbstractionSearch(PRAClusterNode start, PRAClusterNode end, PRAbstractionLayer layer)
+        private List<int> AstarAbstractionSearch(PRAClusterNode start, PRAClusterNode end, PRAbstractionLayer layer, Dictionary<int, PRAClusterNode> nodesToSearch)
         {
             List<int> sol = new List<int>();
 
@@ -1173,7 +1178,7 @@ namespace Bak
             Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
 
             //init the distances to each node from the starting node
-            foreach (var cnodeID in layer.ClusterNodes)
+            foreach (var cnodeID in nodesToSearch)
             {
                 shortestDist.Add(cnodeID.Key, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
             }
@@ -1188,9 +1193,9 @@ namespace Bak
             while (true) 
             {
                 //add all neighbors into the open list
-                foreach (var n in layer.ClusterNodes[currNodeID].neighbors)
+                foreach (var n in nodesToSearch[currNodeID].neighbors)
                 {
-                    if (closedList.Contains(n.Key))
+                    if (closedList.Contains(n.Key) || !nodesToSearch.ContainsKey(n.Key))
                     {
                         continue;
                     }
@@ -1208,21 +1213,21 @@ namespace Bak
                     
                     //check if the path for neighbor would be shorter if the path went through current node
                     //if yes, set neighbor's new parent and new pathcost
-                    else if (shortestDist[n.Key].PathCost + layer.ClusterNodes[currNodeID].neighborDist[n.Key] < shortestDist[n.Key].PathCost)
+                    else if (shortestDist[n.Key].PathCost + nodesToSearch[currNodeID].neighborDist[n.Key] < shortestDist[n.Key].PathCost)
                     {
                         shortestDist[n.Key].Parent = currNodeID;
-                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + layer.ClusterNodes[currNodeID].neighborDist[n.Key];
+                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + nodesToSearch[currNodeID].neighborDist[n.Key];
                         continue;
                     }
 
                     //setting pathCost
                     if (shortestDist[n.Key].PathCost == Int32.MaxValue)
                     {
-                        shortestDist[n.Key].PathCost = layer.ClusterNodes[n.Key].neighborDist[currNodeID];// n.Value;
+                        shortestDist[n.Key].PathCost = nodesToSearch[n.Key].neighborDist[currNodeID];// n.Value;
                     }
                     else
                     {
-                        shortestDist[n.Key].PathCost += layer.ClusterNodes[n.Key].neighborDist[currNodeID];
+                        shortestDist[n.Key].PathCost += nodesToSearch[n.Key].neighborDist[currNodeID];
                     }
                 }
                 closedList.Add(currNodeID);
@@ -1274,7 +1279,7 @@ namespace Bak
                 foreach (int id in PRAstarHierarchy[currLayerID].ClusterNodes[cID].innerNodes)
                 {
                     //Add the corresponding cluster node one layer DOWN from the current one.
-                    res.Add(id, PRAstarHierarchy[currLayerID - 1].ClusterNodes[cID]);
+                    res.Add(id, PRAstarHierarchy[currLayerID - 1].ClusterNodes[id]);
                 }
             }
             return res;
