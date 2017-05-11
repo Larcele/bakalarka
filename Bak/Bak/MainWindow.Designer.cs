@@ -279,6 +279,7 @@
             this.c_selectedPathfinding.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.c_selectedPathfinding.FormattingEnabled = true;
             this.c_selectedPathfinding.Items.AddRange(new object[] {
+            "PRA* (Diagonal shortcut)",
             "PRA* (Manhattan heuristic)",
             "HPA* (Manhattan Heuristic)",
             "A* (Manhattan Heuristic)",

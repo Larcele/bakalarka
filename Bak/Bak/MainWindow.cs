@@ -25,6 +25,7 @@ namespace Bak
         Dictionary<int, PRAbstractionLayer> PRAstarHierarchy = new Dictionary<int, PRAbstractionLayer>();
 
         BackgroundWorker pathfinder;
+        BackgroundWorker invalidater;
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
@@ -827,6 +828,9 @@ namespace Bak
 
             pathfinder = new BackgroundWorker();
             pathfinder.WorkerSupportsCancellation = true;
+            
+            invalidater = new BackgroundWorker();
+            invalidater.WorkerSupportsCancellation = true;
 
             DisablePathFindingdControls();
 
@@ -840,39 +844,77 @@ namespace Bak
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
 
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+
+                case "PRA* (Diagonal shortcut)":
+                    heuristic = Heuristic.DiagonalShortcut;
+                    pathfinder.DoWork += StartPRAstarSearch;
+                    pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
+                    pathfinder.RunWorkerAsync();
+
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
+                    break;
+
                 case "HPA* (Manhattan Heuristic)":
                     pathfinder.DoWork += StartHPAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
-                    
+
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+
                 case "A* (Manhattan Heuristic)":
                     heuristic = Heuristic.Manhattan;
                     pathfinder.DoWork += StartAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
 
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+
                 case "A* (Diagonal Shortcut)":
                     heuristic = Heuristic.DiagonalShortcut;
                     pathfinder.DoWork += StartAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
 
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+
                 case "BackTrack":
                     pathfinder.DoWork += StartBackTrackSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
                     StartBackTrackSearch(null, null);
 
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+
                 case "Dijkstra":
                     pathfinder.DoWork += StartDijkstraSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
                     pathfinder.RunWorkerAsync();
+
+                    invalidater.DoWork += Invalidater_DoWork;
+                    invalidater.RunWorkerAsync();
                     break;
+            }
+        }
+
+        private void Invalidater_DoWork(object sender, DoWorkEventArgs e)
+        {
+            while(true)
+            {
+                if (invalidater.CancellationPending) { break; }
+
+                mainPanel.Invalidate();
             }
         }
 
@@ -929,12 +971,20 @@ namespace Bak
 
         private void StartPRAstarSearch(object sender, DoWorkEventArgs e)
         {
+            //first we check if the start and end node are in the same cluster on the highet level.
+            //if they are not, there is no path between them
+            if (ClusterParent(gMap.StartNodeID, PRAstarHierarchy.Count - 1) != ClusterParent(gMap.EndNodeID, PRAstarHierarchy.Count - 1))
+            {
+                return;
+            }
+
             int layerCount = PRAstarHierarchy.Count;
 
             int startingLayer = layerCount / 2;
 
             //make an abstract path on startingLayer using A*
             List<int> abstractPath = RefinePath(startingLayer);
+           // List<int> nodesToSearch
             
             for (int level = startingLayer-1; level >= 0; level--)
              {
@@ -959,10 +1009,10 @@ namespace Bak
                 //the next start node is going to be the end node of this search. 
                 //since A* path returned is reversed, the first element was the last (end) node.
                 startID = partialPath[0];
-                
             }
             
             pathfinder.CancelAsync();
+            invalidater.CancelAsync();
 
         }
 
@@ -972,6 +1022,8 @@ namespace Bak
             for (int i = partialPath.Count - 1; i >= 0; i--)
             {
                 PathfindingSolution.Add(partialPath[i]);
+                //set the bg color of the path node
+
             }
         }
 
@@ -997,6 +1049,12 @@ namespace Bak
         /// <returns></returns>
         private List<int> AstarLowestLevelSearch(PRAClusterNode start, PRAClusterNode nextDestination, int startPosition)
         {
+            bool isFinalCluster = false;
+            if (nextDestination.innerNodes.Contains(gMap.EndNodeID))
+            {
+                isFinalCluster = true;
+            }
+
             List<int> nodesToSearch = new List<int>();
             nodesToSearch.AddRange(start.innerNodes);
             nodesToSearch.AddRange(nextDestination.innerNodes);
@@ -1032,6 +1090,7 @@ namespace Bak
                     {
                         openList.Add(n.Key);
                         searchedNodes.Add(n.Key);
+                        setSearchedBgColor(n.Key);
                     }
 
                     //setting Parent
@@ -1074,18 +1133,11 @@ namespace Bak
                 openList.Remove(currNodeID);
                 closedList.Add(currNodeID);
 
-                if (nextDestination.innerNodes.Contains(currNodeID))
+                if ((nextDestination.innerNodes.Contains(currNodeID) && !isFinalCluster) || (currNodeID == gMap.EndNodeID))
                 {
                     break;
                 }
             }
-
-            //paint path
-            foreach (var id in searchedNodes)
-            {
-                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
-            }
-
             int parentID = currNodeID;
 
             //add the end node to path
@@ -1194,6 +1246,9 @@ namespace Bak
                 }
             }
 
+            sol.Add(currNodeID);
+            //NOT counting pathcost here, since this is still a high-level abstraction
+
             int parentID = end.ID;
             while (parentID != start.ID)
             {
@@ -1208,6 +1263,21 @@ namespace Bak
             }
 
             return sol;
+        }
+
+        private Dictionary<int, PRAClusterNode> GetOneLevelLowerClusterNodes(List<int> clusterIDs, int currLayerID)
+        {
+            Dictionary<int, PRAClusterNode> res = new Dictionary<int, PRAClusterNode>();
+
+            foreach (int cID in clusterIDs)
+            {
+                foreach (int id in PRAstarHierarchy[currLayerID].ClusterNodes[cID].innerNodes)
+                {
+                    //Add the corresponding cluster node one layer DOWN from the current one.
+                    res.Add(id, PRAstarHierarchy[currLayerID - 1].ClusterNodes[cID]);
+                }
+            }
+            return res;
         }
 
         private void StartHPAstarSearch(object sender, DoWorkEventArgs e)
@@ -1409,6 +1479,9 @@ namespace Bak
             while (currNodeID > -1)
             {
                 searchedNodes.Add(currNodeID);
+                //change bg color to indicate it was searched
+                setSearchedBgColor(currNodeID);
+                
                 foreach (var neighbor in gMap.Nodes[currNodeID].Neighbors)
                 {
                     if (gMap.Nodes[neighbor.Key].Type != GameMap.NodeType.Obstacle && !searchedNodes.Contains(neighbor.Key))
@@ -1422,11 +1495,6 @@ namespace Bak
                     }
                 }
                 currNodeID = closestNeighbor(shortestDist);
-            }
-
-            foreach (var id in searchedNodes)
-            {
-                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
             
             int parentID = gMap.EndNodeID;
@@ -1445,8 +1513,11 @@ namespace Bak
                 PathfindingSolution.Add(parentID);
             }
             pathCost = shortestDist[gMap.EndNodeID].PathCost;
-        }
 
+            pathfinder.CancelAsync();
+            invalidater.CancelAsync();
+        }
+        
         private int closestNeighbor(Dictionary<int, NodeInfo> shortestDistances)
         {
             var nonVisited = shortestDistances.Where(node => !searchedNodes.Contains(node.Key) && node.Value.PathCost != Int32.MaxValue);
@@ -1482,7 +1553,7 @@ namespace Bak
 
             int currNodeID = gMap.StartNodeID;
             openList.Add(currNodeID);
-            while (openList.Count > 0)
+            while (openList.Count > 0 || gMap.EndNodeID != currNodeID)
             {
                 //add all neighbors into the open list
                 foreach (var n in gMap.Nodes[currNodeID].Neighbors)
@@ -1549,7 +1620,10 @@ namespace Bak
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
 
-            int parentID = gMap.EndNodeID;
+            PathfindingSolution.Add(currNodeID);
+            pathCost += shortestDist[currNodeID].PathCost;
+
+            int parentID = currNodeID;//gMap.EndNodeID;
             while (parentID != gMap.StartNodeID)
             {
                 parentID = shortestDist[parentID].Parent;
@@ -1567,6 +1641,7 @@ namespace Bak
             }
 
             pathfinder.CancelAsync();
+            invalidater.CancelAsync();
         }
 
         /// <summary>
@@ -1596,6 +1671,8 @@ namespace Bak
 
             }
         }
+
+        #region Heuristics
 
         /// <summary>
         /// Calculates the distance from a low-level node to an estimated next cluster
@@ -1656,11 +1733,14 @@ namespace Bak
             }
         }
 
+        #endregion
+
         private void StartBackTrackSearch(object sender, DoWorkEventArgs e)
         {
             List<int> path = new List<int>();
             backtrackMap(path, gMap.Nodes[gMap.StartNodeID]);
             pathfinder.CancelAsync();
+            invalidater.CancelAsync();
         }
 
         private void printSolution()
@@ -1673,12 +1753,15 @@ namespace Bak
                 l_pathCost.Text = "- - - ";
                 return;
             }
-            
+
+            StringBuilder s = new StringBuilder();
             foreach (int id in PathfindingSolution)
             {
-                tb_pathOutput.Text += id + ",";
+                s.Append(id + ", ");
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
+
+            tb_pathOutput.Text = s.ToString();
             l_pathCost.Text = pathCost.ToString();
         }
 
@@ -1798,6 +1881,11 @@ namespace Bak
         private void showPRAClustersToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
+        }
+        
+        private void setSearchedBgColor(int currNodeID)
+        {
+            gMap.Nodes[currNodeID].BackColor = currNodeID != gMap.StartNodeID && currNodeID != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[currNodeID].Type];
         }
     }
 
