@@ -13,7 +13,7 @@ namespace Bak
     public partial class Node : UserControl
     {
         public int ID { get; private set; }
-        public int PRAClusterParent { get; private set; }
+        public int PRAClusterParent { get; set; }
         public GameMap.NodeType Type { get; set; }
 
         /// <summary>

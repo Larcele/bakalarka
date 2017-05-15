@@ -9,6 +9,7 @@ namespace Bak
     public class PRAbstractionLayer
     {
         public int ID;
+        public int LastAssignedClusterID = 0;
         public Dictionary<int, PRAClusterNode> ClusterNodes = new Dictionary<int, PRAClusterNode>();
 
         public PRAbstractionLayer(int id)

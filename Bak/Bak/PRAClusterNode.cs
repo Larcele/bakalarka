@@ -91,9 +91,22 @@ namespace Bak
             return s;
         }
 
+        internal void AddNeighbors(List<PRAClusterNode> clusters)
+        {
+            foreach (var c in clusters)
+            {
+                AddNeighbor(c.ID, c);
+            }
+        }
+
+        /// <summary>
+        /// Remembers the PRACluster as a Neighbor. If it already is a neighbor, returns and does nothing.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         internal void AddNeighbor(int key, PRAClusterNode value)
         {
-            if (!neighbors.ContainsKey(key))
+            if (!neighbors.ContainsKey(key) && key != this.ID)
             {
                 neighbors.Add(key, value);
                 calculateHDist(value);

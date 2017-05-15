@@ -84,6 +84,7 @@ namespace Bak
                 if (node.IsHit(e.X, e.Y))
                 {
                     node.InvokeNodeClick(e);
+                   // checkPRAClusters(node);
                     break;
                 }
             }
@@ -91,6 +92,123 @@ namespace Bak
             Invalidate();
             mainPanel.Invalidate();
             
+        }
+
+        private void checkPRAClusters(Node node)
+        {
+            //if only an end point or start point were changed, 
+            //we only need to change their PRAClusterParent (PRC) property.
+            if (node.Type == GameMap.NodeType.EndPosition || node.Type == GameMap.NodeType.StartPosition)
+            {
+                foreach (PRAClusterNode n in PRAstarHierarchy[0].ClusterNodes.Values)
+                {
+                    if (n.neighbors.ContainsKey(node.ID))
+                    {
+                        node.PRAClusterParent = n.ID;
+                        return;
+                    }
+                }
+            }
+            else if (node.Type == GameMap.NodeType.Traversable)
+            {
+                //check their (traversable) neighbors.
+                //1) if there is an orphan there, we can trivially assign the node to this cluster, set PRC, return.
+                //2) else if there is a 3-clique or 2-clique, we check if adding this node would make it a valid n+1 clique.
+                //   If yes, assign, change PRC / neighbors and return. 
+                //3) If not, we create a new cluster (orphan) node and connect it
+                //   to all neighboring clusters.
+                //4) if there are no traversable neighbors of the node, we create a new orphan node
+                //     and create an orphan, disconnected node on each layer of abstraction until the last one.
+
+                var neighborClusters = GetCliqueOfNeighbors(node);
+                //4) -> if there are no neighbors, this will be a new (orphan) node on all levels
+
+                #region disconnected node
+                if (neighborClusters.Count == 0)
+                {
+                    int level = 0;
+                    int prevClusterID = node.ID;
+
+                    while (level <= PRAstarHierarchy.Count - 1)
+                    {
+                        #region the same but retarded
+                        /*if (level == 0)
+                        {
+                            PRAbstractionLayer l = PRAstarHierarchy[level];
+                            PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { node.ID });
+                            l.AddClusterNode(c);
+
+                            node.PRAClusterParent = c.ID;
+                            prevClusterID = c.ID;
+                        }
+                        else
+                        {
+                            PRAbstractionLayer l = PRAstarHierarchy[level];
+                            PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
+                            l.AddClusterNode(c);
+
+                            prevClusterID = c.ID;
+                        }*/
+                        #endregion
+
+                        PRAbstractionLayer l = PRAstarHierarchy[level];
+                        PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
+                        l.AddClusterNode(c);
+
+                        prevClusterID = c.ID;
+
+                        if (level == 0) { node.PRAClusterParent = c.ID; }
+
+                        level++;
+                    }
+                }
+                #endregion
+
+                //1) -> check for orphan(s)
+
+                #region connect to existing orphan
+                var orphans = neighborClusters.Where(c => c.neighbors.Count == 1).ToList();
+                if (orphans.Count > 0)
+                {
+                    PRAClusterNode c = orphans[0]; //pick an orphan. doesn't matter which one really.
+                    c.innerNodes.Add(node.ID);
+                    //create edges between the clusters, if they do not exist
+                    c.AddNeighbors(neighborClusters);
+                    foreach (var n in neighborClusters)
+                    {
+                        n.AddNeighbor(c.ID, c);
+                    }
+                    //set the PRACLusterParent
+                    node.PRAClusterParent = c.ID;
+                }
+                #endregion
+
+                //
+            }
+            else if (node.Type == GameMap.NodeType.Obstacle)
+            {
+                //
+            }
+            
+
+
+
+        }
+
+        private List<PRAClusterNode> GetCliqueOfNeighbors(Node node)
+        {
+            List<PRAClusterNode> clusterNeighbors = new List<PRAClusterNode>();
+
+            List<int> gridNeighbors = node.Neighbors.Where(n => gMap.Nodes[n.Key].IsTraversable()).Select(n => n.Key).ToList();
+            foreach (int gNodeID in gridNeighbors)
+            {
+                int cNodeID = gMap.Nodes[gNodeID].PRAClusterParent;
+                PRAClusterNode prcn = PRAstarHierarchy[0].ClusterNodes[cNodeID];
+                if (!clusterNeighbors.Contains(prcn)) {
+                    clusterNeighbors.Add(prcn);
+                }
+            }
+            return clusterNeighbors;
         }
 
         private void MainPanel_Paint(object sender, PaintEventArgs e)
@@ -204,6 +322,7 @@ namespace Bak
                 LoadNewMap(fileDialog.FileName, filelines);
                 this.Text = fileDialog.FileName;
                 SetMapSize();
+                MainWindow_Resize(null, null);
             }
         }
 
@@ -245,7 +364,6 @@ namespace Bak
 
         private void BuildPRAbstractMap()
         {
-            int clusternodeId = 0;
             int currentAbslayerID = 0;
             PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
 
@@ -261,11 +379,11 @@ namespace Bak
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
-                PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 4);
+                PRAClusterNode c = findNeighborClique(currentAbslayerID, absl.LastAssignedClusterID, nodes, nodes[i], 4);
                 if (c != null) //4clique that contains nodes[i] exists 
                 {
                     //raise ID
-                    clusternodeId++;
+                    absl.LastAssignedClusterID++;
 
                     //add clique to abstract layer
                     absl.AddClusterNode(c);
@@ -290,11 +408,11 @@ namespace Bak
                 {
                     if (!nodes.ContainsKey(i)) { continue; }
 
-                    PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 3);
+                    PRAClusterNode c = findNeighborClique(currentAbslayerID, absl.LastAssignedClusterID, nodes, nodes[i], 3);
                     if (c != null) //4clique that contains nodes[i] exists 
                     {
                         //raise ID
-                        clusternodeId++;
+                        absl.LastAssignedClusterID++;
                         //add clique to abstract layer
                         absl.AddClusterNode(c);
 
@@ -319,11 +437,11 @@ namespace Bak
                 {
                     if (!nodes.ContainsKey(i)) { continue; }
 
-                    PRAClusterNode c = findNeighborClique(currentAbslayerID, clusternodeId, nodes, nodes[i], 2);
+                    PRAClusterNode c = findNeighborClique(currentAbslayerID, absl.LastAssignedClusterID, nodes, nodes[i], 2);
                     if (c != null) //4clique that contains nodes[i] exists 
                     {
                         //raise ID
-                        clusternodeId++;
+                        absl.LastAssignedClusterID++;
                         //add clique to abstract layer
                         absl.AddClusterNode(c);
 
@@ -344,11 +462,11 @@ namespace Bak
             //remaining nodes are orphans. Create remaining PRAClusterNodes from these orphans.
             foreach (var n in nodes)
             {
-                PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, new List<int>{ n.Key });
+                PRAClusterNode c = new PRAClusterNode(currentAbslayerID, absl.LastAssignedClusterID, new List<int>{ n.Key });
                 c.calculateXY(gMap.Nodes);
                 c.InitPRAClusterParents(gMap.Nodes);
                 //raise ID
-                clusternodeId++;
+                absl.LastAssignedClusterID++;
                 //add clique to abstract layer
                 absl.AddClusterNode(c);
 
@@ -392,14 +510,13 @@ namespace Bak
             //at the start, there is only the first abstraction layer. 
             //This layer consists of nodes, where a node can contain a 4-clique, 3-clique, 2-clique or be an orphan node.
             //We continue building layers and abstracting until there is only a single node left.
-
-            int clusternodeId = 0;
-            int currentAbslayerID = 1;
+            
+            int currAbslayerID = 1;
 
             while (true)
             {
-                PRAbstractionLayer currentLevel = new PRAbstractionLayer(currentAbslayerID);
-                PRAbstractionLayer oneLevelLower = PRAstarHierarchy[currentAbslayerID - 1];
+                PRAbstractionLayer currentLevel = new PRAbstractionLayer(currAbslayerID);
+                PRAbstractionLayer oneLevelLower = PRAstarHierarchy[currAbslayerID - 1];
 
                 Dictionary<int, PRAClusterNode> resolvedNodes = new Dictionary<int, PRAClusterNode>();
 
@@ -432,12 +549,12 @@ namespace Bak
                             //create PCN
                             List<int> innerNodes = new List<int> { node.Key };
                             innerNodes.AddRange(nodesToCheckForCliques[i]);
-                            PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, innerNodes);
+                            PRAClusterNode c = new PRAClusterNode(currAbslayerID, currentLevel.LastAssignedClusterID, innerNodes);
                             c.calculateXY(oneLevelLower);
                             c.setParentToAllInnerNodes(oneLevelLower);
 
                             //raise ID
-                            clusternodeId++;
+                            currentLevel.LastAssignedClusterID++;
                             //add clique to abstract layer
                             currentLevel.AddClusterNode(c);
 
@@ -464,12 +581,12 @@ namespace Bak
                 //create orphan PCNs 
                 foreach (var n in nodes)
                 {
-                    PRAClusterNode c = new PRAClusterNode(currentAbslayerID, clusternodeId, new List<int> { n.Key });
+                    PRAClusterNode c = new PRAClusterNode(currAbslayerID, currentLevel.LastAssignedClusterID, new List<int> { n.Key });
                     c.calculateXY(oneLevelLower);
                     c.setParentToAllInnerNodes(oneLevelLower);
 
                     //raise ID
-                    clusternodeId++;
+                    currentLevel.LastAssignedClusterID++;
                     //add clique to abstract layer
                     currentLevel.AddClusterNode(c);
                 }
@@ -501,7 +618,7 @@ namespace Bak
                 }
                 #endregion
 
-                PRAstarHierarchy.Add(currentAbslayerID, currentLevel);
+                PRAstarHierarchy.Add(currAbslayerID, currentLevel);
 
                 //if the map has inconvenient properties such as multiple non-reachable areas that 
                 //are already as abstracted as possible, break the while loop
@@ -519,8 +636,7 @@ namespace Bak
                 }
                 else
                 {
-                    currentAbslayerID++;
-                    clusternodeId = 0;
+                    currAbslayerID++;
                 }
             }
         }
@@ -975,6 +1091,8 @@ namespace Bak
             //if they are not, there is no path between them.
             if (ClusterParent(gMap.StartNodeID, PRAstarHierarchy.Count - 1) != ClusterParent(gMap.EndNodeID, PRAstarHierarchy.Count - 1))
             {
+                pathfinder.CancelAsync();
+                invalidater.CancelAsync();
                 return;
             }
 
@@ -1028,7 +1146,7 @@ namespace Bak
             {
                 PathfindingSolution.Add(partialPath[i]);
                 //set the bg color of the path node
-
+                setSearchedBgColor(partialPath[i]);
             }
         }
 
