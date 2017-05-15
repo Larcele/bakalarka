@@ -180,6 +180,14 @@ namespace Bak
                     }
                     //set the PRACLusterParent
                     node.PRAClusterParent = c.ID;
+
+                    //set connections between parent clusters too
+                    int absLayer = 1;
+                    while (absLayer <= PRAstarHierarchy.Count - 1)
+                    {
+                        absLayer++;
+                    }
+
                 }
                 #endregion
 
@@ -1409,6 +1417,7 @@ namespace Bak
 
             //concat it all to pathfindingSolution
 
+            StartAstarSearch(null, null);
 
 
         }
