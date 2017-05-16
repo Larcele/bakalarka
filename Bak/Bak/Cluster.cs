@@ -15,7 +15,10 @@ namespace Bak
         public int ID { get { return id; } }
         public List<int> InnerNodes { get { return innerNodes; } }
         public List<int> OuterNodes { get { return outerNodes; } }
-
+        public Dictionary<int, Cluster> neighbors = new Dictionary<int, Cluster>(); //neighboring HPAClusters
+        public Dictionary<int, float> outerNodesDist = new Dictionary<int, float>(); //the distances between outer nodes, pre-computed by A*
+        public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
+        
         public Cluster(int id)
         {
             this.id = id;

@@ -321,7 +321,7 @@ namespace Bak
         
         private void loadMapToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OpenFileDialog fileDialog = new OpenFileDialog() { InitialDirectory = Directory.GetCurrentDirectory() + "\\GMaps", Title = "Open GMAP File", Filter = "GMAP files (*.gmap)|*.gmap" };
+            OpenFileDialog fileDialog = new OpenFileDialog() { InitialDirectory = Directory.GetCurrentDirectory() + "\\GMaps", Title = "Open GMAP File" };//, Filter = "GMAP files (*.gmap)|*.gmap" };
             if (fileDialog.ShowDialog() == DialogResult.OK)
             {
                 ResetPanelSize();
@@ -376,14 +376,17 @@ namespace Bak
             PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
 
             //filter out all traversable nodes and sort (O(nlogn)
-            Dictionary<int, Node> nodes = gMap.Nodes.Where(n => n.Value.Type != GameMap.NodeType.Obstacle)
-                                                    .OrderBy(n => n.Key)
-                                                    .ToDictionary(n => n.Key, n => n.Value);
+            var nodes = gMap.Nodes.Where(n => n.Value.Type != GameMap.NodeType.Obstacle)
+                                                     .OrderBy(n => n.Key)
+                                                     .ToDictionary(n => n.Key, n => n.Value);
+            
+            //this is need to be in for loops since List is a O(1) lookup for First() and Last(). 
+            //Not sure on Dictionary, but probably is O(n)
+            List<int> nodeKeys = nodes.Keys.ToList();
 
-            //each is O(n) where n is the number of nodes
             #region 4-cliques
             //find all 4-cliques
-            for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+            for (int i = nodeKeys.First(); i < nodeKeys.Last(); ++i)
             {
                 if (!nodes.ContainsKey(i)) { continue; }
 
@@ -412,12 +415,12 @@ namespace Bak
             //find all 3-cliques
             if (nodes.Count > 0)
             {
-                for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+                for (int i = nodeKeys.First(); i < nodeKeys.Last(); ++i)
                 {
                     if (!nodes.ContainsKey(i)) { continue; }
 
                     PRAClusterNode c = findNeighborClique(currentAbslayerID, absl.LastAssignedClusterID, nodes, nodes[i], 3);
-                    if (c != null) //4clique that contains nodes[i] exists 
+                    if (c != null) //3clique that contains nodes[i] exists 
                     {
                         //raise ID
                         absl.LastAssignedClusterID++;
@@ -441,12 +444,12 @@ namespace Bak
             //find all 2-cliques
             if (nodes.Count > 0)
             {
-                for (int i = nodes.First().Key; i < nodes.Last().Key; ++i)
+                for (int i = nodeKeys.First(); i < nodeKeys.Last(); ++i)
                 {
                     if (!nodes.ContainsKey(i)) { continue; }
 
                     PRAClusterNode c = findNeighborClique(currentAbslayerID, absl.LastAssignedClusterID, nodes, nodes[i], 2);
-                    if (c != null) //4clique that contains nodes[i] exists 
+                    if (c != null) //2clique that contains nodes[i] exists 
                     {
                         //raise ID
                         absl.LastAssignedClusterID++;
@@ -485,32 +488,63 @@ namespace Bak
             PRAstarHierarchy.Add(absl.ID, absl);
 
             #region PRAClusterNode edge creation
+
             //add cluster connections
-            foreach (var c in absl.ClusterNodes)
+            foreach (PRAClusterNode c in absl.ClusterNodes.Values)
             {
-                foreach (var c2 in absl.ClusterNodes)
+                List<PRAClusterNode> innerNodesNeighbors = getInnerNodeNeighbors(c, 0);
+                foreach (PRAClusterNode p in innerNodesNeighbors)
                 {
-                    if (c.Value == c2.Value) { continue; }
-
-                    //check if any inner node in c has a neighbor that is c2's inner node
-                    foreach (var n in c.Value.innerNodes)
-                    {
-                        var res = gMap.Nodes[n].Neighbors.Keys.Intersect(c2.Value.innerNodes);
-                        if (res.Count() != 0)
-                        {
-                            //add neighbors (=> create edge)
-                            c.Value.AddNeighbor(c2.Key, c2.Value);// Value.neighbors.Add(c2.Key, c2.Value);
-                            c2.Value.AddNeighbor(c.Key, c.Value);
-
-                        }
-                    }
-
+                    //add neighbors (=> create edge)
+                    c.AddNeighbor(p.ID, p);
+                    p.AddNeighbor(c.ID, c);
                 }
+
             }
             #endregion
 
             //build additional layers until a single abstract node is left for each non-disconnected map space
             buildPRALayers();
+        }
+
+        private List<PRAClusterNode> getInnerNodeNeighbors(PRAClusterNode c, int layer)
+        {
+            List<PRAClusterNode> res = new List<PRAClusterNode>();
+            foreach (var n in c.innerNodes)
+            {
+                if (layer == 0)
+                {
+                    foreach (var n2 in gMap.Nodes[n].Neighbors.Keys)
+                    {
+                        Node neigh = gMap.Nodes[n2];
+                        if (neigh.IsTraversable() && !c.innerNodes.Contains(n2)) 
+                        {
+                            //get the PRAClusterParent of this node and add it to the list
+                            int parentID = neigh.PRAClusterParent;
+                            PRAClusterNode p = PRAstarHierarchy[0].ClusterNodes[parentID];
+                            if (!res.Contains(p))
+                            {
+                                res.Add(p);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    PRAbstractionLayer prev = PRAstarHierarchy[layer - 1];
+                    foreach (var n2 in prev.ClusterNodes[n].neighbors)
+                    {
+                        //get the PRAClusterParent of this node and add it to the list
+                        int parentID = n2.Value.PRAClusterParent;
+                        PRAClusterNode p = PRAstarHierarchy[layer].ClusterNodes[parentID];
+                        if (!res.Contains(p))
+                        {
+                            res.Add(p);
+                        }
+                    }
+                }
+            }
+            return res;
         }
 
         private void buildPRALayers()
@@ -566,7 +600,7 @@ namespace Bak
                             //add clique to abstract layer
                             currentLevel.AddClusterNode(c);
 
-                            //mark all nodes now contained in the clusernode as redolved
+                            //mark all nodes now contained in the clusernode as resolved
                             foreach (int n in c.innerNodes)
                             {
                                 resolvedNodes.Add(n, oneLevelLower.ClusterNodes[n]);
@@ -600,8 +634,23 @@ namespace Bak
                 }
                 #endregion
 
+                PRAstarHierarchy.Add(currAbslayerID, currentLevel);
+
                 #region PRAClusterNode edge creation
+
                 //add cluster connections
+                foreach (PRAClusterNode c in currentLevel.ClusterNodes.Values)
+                {
+                    List<PRAClusterNode> innerNodesNeighbors = getInnerNodeNeighbors(c, currAbslayerID);
+                    foreach (PRAClusterNode p in innerNodesNeighbors)
+                    {
+                        //add neighbors (=> create edge)
+                        c.AddNeighbor(p.ID, p);
+                        p.AddNeighbor(c.ID, c);
+                    }
+
+                }
+                /*
                 foreach (var c in currentLevel.ClusterNodes)
                 {
                     foreach (var c2 in currentLevel.ClusterNodes)
@@ -623,12 +672,11 @@ namespace Bak
                         }
 
                     }
-                }
+                }*/
                 #endregion
 
-                PRAstarHierarchy.Add(currAbslayerID, currentLevel);
 
-                //if the map has inconvenient properties such as multiple non-reachable areas that 
+                //if the map has properties such as multiple non-reachable areas that 
                 //are already as abstracted as possible, break the while loop
                 if (currentLevel.AllCLustersDisconnected())
                 {
@@ -637,7 +685,7 @@ namespace Bak
                 
                 //building PCN connection and, therefore, this abstraction layer.
                 //check if this abstraction layer contains only a single node.
-                //if it does, finish. if it doesn't, raise the currentAbslayerID, reset the clusterID and loop.
+                //if it does, finish. if it doesn't, raise the currentAbslayerID and loop.
                 if (currentLevel.ClusterNodes.Count == 1)
                 {
                     break;
@@ -715,20 +763,6 @@ namespace Bak
                     }
                 }
                 return true;
-
-                #region deprecated
-                /*foreach (var n in node.neighbors)
-                {
-                    List<int> neighborsToCheck = node.neighbors.Where(n1 => n1.Key != n.Key)
-                                                               .Select(n2 => n2.Key).ToList();
-                    neighborsToCheck.Add(node.ID);
-                    if (!n.Value.HasAllNeighbors(neighborsToCheck))
-                    {
-                        return false;
-                    }
-                }
-                return true;*/
-                #endregion
             }
             
         }
@@ -740,35 +774,6 @@ namespace Bak
             switch (cliqueSize)
             {
                 case 4:
-                    #region probably deprecated
-                    /*
-                    //upper-right 4square
-                    if (n.AreNeighbors(n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1)
-                        && AreTraversable(n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1))
-                    {
-                        res = new PRAClusterNode(nodeId, new List<int> {n.ID, n.ID - gMap.Width, n.ID - gMap.Width + 1, n.ID + 1 });
-                        nodeId++;
-                    }
-
-
-                    //upper-left 4square
-                    else if (n.AreNeighbors(n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1)
-                        && AreTraversable(n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1))
-                    {
-                        res = new PRAClusterNode(nodeId, new List<int> { n.ID, n.ID - gMap.Width, n.ID - gMap.Width - 1, n.ID - 1 });
-                        nodeId++;
-                    }
-                    
-                    //lower-left 4square
-                    else if (n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1)
-                        && AreTraversable(n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1))
-                    {
-                        res = new PRAClusterNode(nodeId, new List<int> { n.ID, n.ID + gMap.Width, n.ID + gMap.Width - 1, n.ID - 1 });
-                        nodeId++;
-                    }
-                    */
-                    #endregion
-                    
                     //lower-right 4square
                     if (nonClusteredNodes(nodes, n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1) 
                         && n.AreNeighbors(n.ID + gMap.Width, n.ID + gMap.Width + 1, n.ID + 1)
@@ -854,6 +859,7 @@ namespace Bak
         {
             foreach (var nodeID in nodes)
             {
+                //this is O(1) because Dictionary
                 if (!nonClusteredNodes.ContainsKey(nodeID))
                 {
                     return false;
@@ -1448,7 +1454,7 @@ namespace Bak
                     if (firstRow(i, 0) ||
                         lastRow(i, yDiv * gMap.Width) ||
                         firstCol(j, 0) ||
-                        lastCol(j, xDiv - 1)) { //this node could be one of hte outer nodes later
+                        lastCol(j, xDiv - 1)) { //this node could be one of the outer nodes later
                         if (gMap.Nodes[i + j].IsTraversable())
                         {
                             c1.OuterNodes.Add(i + j);
@@ -1561,13 +1567,15 @@ namespace Bak
                         int cID = clusterOuterNode(absl, c.Key, neighbor.Key);
                         if (cID != -1) //cluster does contain neighbor in its outer nodes
                         {
-                            ClusterNode cln = new ClusterNode(absl.ID, c.Key, cID, nodeID, neighbor.Key);
-                            absl.ClusterNodes.Add(clusterNodeID, cln);
+                            ClusterNode cln = new ClusterNode(cID, neighbor.Key);
+                            c.Value.ClusterNodes.Add(clusterNodeID, cln);
                             
                             clusterNodeID++;
                         }
                     }
                 }
+
+
             }
        }
 
@@ -1670,6 +1678,165 @@ namespace Bak
 
         private void StartAstarSearch(object sender, DoWorkEventArgs e)
         {
+            bool[] closedSet = new bool[gMap.Nodes.Count];
+            HashSet<int> openSet = new HashSet<int>();
+
+            //starting node is in the open set
+            openSet.Add(gMap.StartNodeID);
+
+            // For each node, which node it can most efficiently be reached from.
+            // If a node can be reached from many nodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
+
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in gMap.Nodes.Keys)
+            {
+                gScore.Add(nodeID, float.MaxValue);
+            }
+            // The cost of going from start to start is zero.
+            gScore[gMap.StartNodeID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in gMap.Nodes.Keys)
+            {
+                fScore.Add(nodeID, float.MaxValue);
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[gMap.StartNodeID] = H(gMap.StartNodeID);
+
+            int currNode = 0; //default value
+            bool pathFound = false;
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i]).FirstOrDefault();
+                if (currNode == gMap.EndNodeID)
+                {
+                    //break the loop and reconstruct path below
+                    pathFound = true;
+                    break;
+                }
+
+                openSet.Remove(currNode);
+                closedSet[currNode] = true; //"added" to closedList
+
+                foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
+                {
+                    // Ignore the neighbor which is already evaluated or it is non-traversable.
+                    if (gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet[neighbor.Key] == true)
+                    { continue; }
+
+                    float tentativeG = gScore[currNode] + neighbor.Value; // The distance from start to a neighbor
+
+                    if (!openSet.Contains(neighbor.Key)) // Discover a new node
+                    {
+                        searchedNodes.Add(neighbor.Key);
+                        openSet.Add(neighbor.Key);
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H(neighbor.Key);
+                }
+            }
+            
+            //paint visited nodes
+            foreach (var id in searchedNodes)
+            {
+                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
+            }
+
+
+            if (!pathFound)
+            {
+                PathfindingSolution.Clear();
+                //No solution
+            }
+            else
+            {
+                PathfindingSolution.Add(currNode);
+                while (cameFrom.ContainsKey(currNode))
+                {
+                    currNode = cameFrom[currNode];
+                    PathfindingSolution.Add(currNode);
+                }
+                pathCost = gScore[gMap.EndNodeID];
+            }
+
+            pathfinder.CancelAsync();
+            invalidater.CancelAsync();
+
+            #region rewritten
+            /*
+            function A*(start, goal)
+                // The set of nodes already evaluated.
+                closedSet:= { }
+                // The set of currently discovered nodes that are not evaluated yet.
+                // Initially, only the start node is known.
+                openSet:= { start}
+                // For each node, which node it can most efficiently be reached from.
+                // If a node can be reached from many nodes, cameFrom will eventually contain the
+                // most efficient previous step.
+                cameFrom:= the empty map
+
+                // For each node, the cost of getting from the start node to that node.
+                gScore:= map with default value of Infinity
+                // The cost of going from start to start is zero.
+                gScore[start] := 0
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            fScore:= map with default value of Infinity
+                // For the first node, that value is completely heuristic.
+                fScore[start] := heuristic_cost_estimate(start, goal)
+
+            while openSet is not empty
+                    current := the node in openSet having the lowest fScore[] value
+                    if current = goal
+                        return reconstruct_path(cameFrom, current)
+
+                    openSet.Remove(current)
+                    closedSet.Add(current)
+            for each neighbor of current
+                        if neighbor in closedSet
+                            continue		// Ignore the neighbor which is already evaluated.
+                        // The distance from start to a neighbor
+                        tentative_gScore:= gScore[current] + dist_between(current, neighbor)
+                        if neighbor not in openSet	// Discover a new node
+                            openSet.Add(neighbor)
+                        else if tentative_gScore >= gScore[neighbor]
+                            continue		// This is not a better path.
+
+                        // This path is the best until now. Record it!
+                        cameFrom[neighbor] := current
+                        gScore[neighbor] := tentative_gScore
+                        fScore[neighbor] := gScore[neighbor] + heuristic_cost_estimate(neighbor, goal)
+
+            return failure
+
+                function reconstruct_path(cameFrom, current)
+                    total_path := [current]
+                    while current in cameFrom.Keys:
+                        current:= cameFrom[current]
+                        total_path.append(current)
+                    return total_path
+                    */
+            #endregion
+
+            /*
             List<int> closedList = new List<int>();
             List<int> openList = new List<int>();
 
@@ -1730,7 +1897,7 @@ namespace Bak
                 Dictionary<int, double> F = new Dictionary<int, double>();
                 foreach (var n in openList)
                 {
-                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H(n));
+                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ /* + H(n));
                 }
 
                 //choose the lowest F node (LFN)  (O(n))
@@ -1773,7 +1940,7 @@ namespace Bak
             }
 
             pathfinder.CancelAsync();
-            invalidater.CancelAsync();
+            invalidater.CancelAsync();*/
         }
 
         /// <summary>
@@ -1789,14 +1956,12 @@ namespace Bak
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
 
                 case Heuristic.DiagonalShortcut:
-                    int h = 0;
-                    int dx = Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X);
-                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y);
-                    if (dx > dy)
-                        h = 14 * dy + 10 * (dx - dy);
-                    else
-                        h = 14 * dx + 10 * (dy - dx);
-                    return h;
+                    int D = 10;
+                    int D2 = 14;
+
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X/30 - gMap.Nodes[gMap.EndNodeID].Location.X/30);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y/30 - gMap.Nodes[gMap.EndNodeID].Location.Y/30);
+                    return D * (dx + dy) + (D2 - 2 * D) * Math.Min(dx, dy);
 
                 default:
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
@@ -1991,12 +2156,13 @@ namespace Bak
                     {
                         gMap.Nodes[nodeID].BackColor = Color.White;
                     }
+                    foreach (var cNode in c.ClusterNodes.Values)
+                    {
+                        gMap.Nodes[cNode.GNodeID].BackColor = Color.Red;
+                        gMap.Nodes[cNode.GNodeID].BackColor = Color.Red;
+
+                    }
                     sfns += 50;
-                }
-                foreach (var cNode in a.ClusterNodes.Values)
-                {
-                    gMap.Nodes[cNode.Node1ID].BackColor = Color.Red;
-                    gMap.Nodes[cNode.Node2ID].BackColor = Color.Red;
                 }
             }
 

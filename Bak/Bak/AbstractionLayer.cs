@@ -13,14 +13,10 @@ namespace Bak
         Dictionary<int, Cluster> clusters = new Dictionary<int, Cluster>();
 
         public int ID { get { return id; } }
-
-        AbstractionLayer higherLevel;
-        AbstractionLayer lowerLevel;
-
+        
         public Dictionary<int, Cluster> Clusters { get { return clusters; } }
-        public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
 
-        public AbstractionLayer(int id, List<Cluster> clusters, AbstractionLayer h = null, AbstractionLayer l = null)
+        public AbstractionLayer(int id, List<Cluster> clusters)
         {
             this.id = id;
 
@@ -28,9 +24,7 @@ namespace Bak
             {
                 this.clusters.Add(c.ID, c);
             }
-
-            higherLevel = h;
-            lowerLevel = l;
+            
 
         }
     }
