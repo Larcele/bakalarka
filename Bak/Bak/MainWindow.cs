@@ -112,14 +112,23 @@ namespace Bak
             }
             else if (node.Type == GameMap.NodeType.Traversable)
             {
-                //check their (traversable) neighbors.
-                //1) if there is an orphan there, we can trivially assign the node to this cluster, set PRC, return.
-                //2) else if there is a 3-clique or 2-clique, we check if adding this node would make it a valid n+1 clique.
-                //   If yes, assign, change PRC / neighbors and return. 
+                #region blah blah
+                //check their (traversable) neighbors. Cases are following:
+                //1) if there is an orphan there, we can trivially assign the node to this cluster.
+                //   set PRCParent, set neighbors (all neighboring clusters of node must have n as their neighbor cluster
+                //   and n must have all the neighbor clusters as neighbors. This is not trivial if we are
+                //   joining clusters that were disconnected before the change.
+                //   This implies: if all the neighbors belong to the same cluster on the highest level of abstraction, we
+                //   need not do any further action. If they were disconnected however, recompute all higher abstraction layers
+                //   except the base one (since that we changed correctly in this function).
+                //2) if there is a 3-clique or 2-clique, we check if adding this node would make it a valid n+1 clique.
+                //   If yes, assign, change PRCParent / neighbors / coords. Above Implication remains true for this as well. 
                 //3) If not, we create a new cluster (orphan) node and connect it
-                //   to all neighboring clusters.
+                //   to all neighboring clusters. We then recompute all higher levels.
                 //4) if there are no traversable neighbors of the node, we create a new orphan node
-                //     and create an orphan, disconnected node on each layer of abstraction until the last one.
+                //   and create an orphan, disconnected node on each layer of abstraction until the last one. 
+                //   No recomputing needed.
+                #endregion
 
                 var neighborClusters = GetCliqueOfNeighbors(node);
                 //4) -> if there are no neighbors, this will be a new (orphan) node on all levels
@@ -154,11 +163,17 @@ namespace Bak
 
                         PRAbstractionLayer l = PRAstarHierarchy[level];
                         PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
+                        c.calculateXY(gMap.Nodes);
                         l.AddClusterNode(c);
 
                         prevClusterID = c.ID;
 
                         if (level == 0) { node.PRAClusterParent = c.ID; }
+                        else
+                        {
+                            PRAClusterNode parent = PRAstarHierarchy[level - 1].ClusterNodes[prevClusterID];
+                            c.PRAClusterParent = parent.ID;
+                        }
 
                         level++;
                     }
@@ -1814,13 +1829,13 @@ namespace Bak
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - end.X) + Math.Abs(gMap.Nodes[n].Location.Y - end.Y));
 
                 case Heuristic.DiagonalShortcut:
-                    int h = 0;
+                    float h = 0;
                     int dx = Math.Abs(gMap.Nodes[n].Location.X - end.X);
                     int dy = Math.Abs(gMap.Nodes[n].Location.Y - end.Y);
                     if (dx > dy)
-                        h = 14 * dy + 10 * (dx - dy);
+                        h = 1.4f * dy + 1 * (dx - dy);
                     else
-                        h = 14 * dx + 10 * (dy - dx);
+                        h = 1.4f * dx + 1 * (dy - dx);
                     return h;
 
                 default:
@@ -1844,13 +1859,13 @@ namespace Bak
                     return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
 
                 case Heuristic.DiagonalShortcut:
-                    int h = 0;
+                    float h = 0;
                     int dx = Math.Abs(layer.ClusterNodes[n].X - end.X);
                     int dy = Math.Abs(layer.ClusterNodes[n].Y - end.Y);
                     if (dx > dy)
-                        h = 14 * dy + 10 * (dx - dy);
+                        h = 1.4f * dy + 1* (dx - dy);
                     else
-                        h = 14 * dx + 10 * (dy - dx);
+                        h = 1.4f * dx + 1 * (dy - dx);
                     return h;
 
                 default:

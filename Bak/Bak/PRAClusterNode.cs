@@ -48,7 +48,7 @@ namespace Bak
         }
 
         /// <summary>
-        /// calculates the average X and Y value of all inner nodes for base layer. Sets these values as X and Y
+        /// calculates the average X and Y value of all inner nodes for *base* layer. Sets these values as X and Y
         /// </summary>
         public void calculateXY(NodeCollection nodes)
         {
@@ -65,7 +65,7 @@ namespace Bak
         }
 
         /// <summary>
-        /// calculates the average X and Y value of all inner nodes for higher layers. Sets these values as X and Y
+        /// calculates the average X and Y value of all inner nodes for *higher* layers. Sets these values as X and Y
         /// </summary>
         public void calculateXY(PRAbstractionLayer lowerLayer)
         {
@@ -121,7 +121,7 @@ namespace Bak
                 int dx = Math.Abs(this.X - neighbor.X);
                 int dy = Math.Abs(this.Y - neighbor.Y);
 
-                int dist = 14 * Math.Min(dx, dy) + Math.Abs(dx - dy);
+                float dist = 1.4f * Math.Min(dx, dy) + Math.Abs(dx - dy);
 
                 this.neighborDist.Add(neighbor.ID, dist);
             }
