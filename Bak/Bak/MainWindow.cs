@@ -84,7 +84,7 @@ namespace Bak
                 if (node.IsHit(e.X, e.Y))
                 {
                     node.InvokeNodeClick(e);
-                   // checkPRAClusters(node);
+                    //checkPRAClusters(node);
                     break;
                 }
             }
@@ -98,11 +98,12 @@ namespace Bak
         {
             //if only an end point or start point were changed, 
             //we only need to change their PRAClusterParent (PRC) property.
+            //O(n)
             if (node.Type == GameMap.NodeType.EndPosition || node.Type == GameMap.NodeType.StartPosition)
             {
                 foreach (PRAClusterNode n in PRAstarHierarchy[0].ClusterNodes.Values)
                 {
-                    if (n.neighbors.ContainsKey(node.ID))
+                    if (n.innerNodes.Contains(node.ID))
                     {
                         node.PRAClusterParent = n.ID;
                         return;
@@ -956,6 +957,14 @@ namespace Bak
                 return;
             }
 
+            string pathfinding = (string)c_selectedPathfinding.SelectedItem;
+
+            if (pathfinding == "BackTrack" && gMap.Nodes.Count > 20)
+            {
+                MessageBox.Show("This map is too large for BackTracking to compute a solution in a reasonable amount of time. Please select another pathfinding approach.");
+                return;
+            }
+
             pathfinder = new BackgroundWorker();
             pathfinder.WorkerSupportsCancellation = true;
             
@@ -966,7 +975,7 @@ namespace Bak
 
             stopWatch = new Stopwatch();
             stopWatch.Start();
-            switch ((string)c_selectedPathfinding.SelectedItem)
+            switch (pathfinding)
             {
                 case "PRA* (Manhattan heuristic)":
                     heuristic = Heuristic.Manhattan;
@@ -1195,6 +1204,114 @@ namespace Bak
             List<int> nodesToSearch = new List<int>();
             nodesToSearch.AddRange(start.innerNodes);
             nodesToSearch.AddRange(nextDestination.innerNodes);
+            List<int> sol = new List<int>();
+
+            Dictionary<int, bool> closedSet = new Dictionary<int, bool>();
+            foreach (int id in nodesToSearch)
+            {
+                closedSet.Add(id, false);
+            }
+            HashSet<int> openSet = new HashSet<int>();
+
+            //starting node is in the open set
+            openSet.Add(startPosition);
+
+            // For each clusternode, which clusternode it can most efficiently be reached from.
+            // If a cnode can be reached from many cnodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
+
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                gScore.Add(nodeID, float.MaxValue);
+            }
+            // The cost of going from start to start is zero.
+            gScore[start.ID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                fScore.Add(nodeID, float.MaxValue);
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[startPosition] = H_lowPRA(startPosition, nextDestination);
+
+            int currNode = 0; //default value
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i]).FirstOrDefault();
+                if ((nextDestination.innerNodes.Contains(currNode) && !isFinalCluster) || (currNode == gMap.EndNodeID))
+                {
+                    //break the loop and reconstruct path below
+                    break;
+                }
+                
+                openSet.Remove(currNode);
+                closedSet[currNode] = true; //"added" to closedList
+
+                foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
+                {
+                    // Ignore the neighbor which is already evaluated or a neighbor 
+                    //that doesn't belong to neither start nor nextDestination cluster.
+                    if ((!start.innerNodes.Contains(neighbor.Key) && !nextDestination.innerNodes.Contains(neighbor.Key)) 
+                        || closedSet[neighbor.Key] == true)
+                    { continue; }
+
+                    // The distance from start to a neighbor
+                    float tentativeG = gScore[currNode] + neighbor.Value;
+                    if (!openSet.Contains(neighbor.Key)) // Discover a new node
+                    {
+                        searchedNodes.Add(neighbor.Key);
+                        setSearchedBgColor(neighbor.Key);
+                        openSet.Add(neighbor.Key);
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H_lowPRA(neighbor.Key, nextDestination);
+                }
+            }
+
+            sol.Add(currNode);
+            while (cameFrom.ContainsKey(currNode))
+            {
+                int child = currNode;
+                currNode = cameFrom[currNode];
+
+                pathCost += gMap.Nodes[currNode].Neighbors[child];
+                sol.Add(currNode);
+            }
+            
+            pathfinder.CancelAsync();
+            invalidater.CancelAsync();
+
+            return sol;
+
+            /*
+
+            bool isFinalCluster = false;
+            if (nextDestination.innerNodes.Contains(gMap.EndNodeID))
+            {
+                isFinalCluster = true;
+            }
+
+            List<int> nodesToSearch = new List<int>();
+            nodesToSearch.AddRange(start.innerNodes);
+            nodesToSearch.AddRange(nextDestination.innerNodes);
             
             List<int> sol = new List<int>();
 
@@ -1260,7 +1377,7 @@ namespace Bak
                 Dictionary<int, double> F = new Dictionary<int, double>();
                 foreach (var n in openList)
                 {
-                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H_lowPRA(n, nextDestination));
+                    F.Add(n, shortestDist[n].PathCost/*G(n)*//* + H_lowPRA(n, nextDestination));
                 }
 
                 //choose the lowest F node (LFN)  (O(n))
@@ -1297,6 +1414,7 @@ namespace Bak
             }
 
             return sol;
+    */
 
         }
 
@@ -1304,100 +1422,94 @@ namespace Bak
         {
             List<int> sol = new List<int>();
 
-            List<int> closedList = new List<int>();
-            List<int> openList = new List<int>();
-
-            Dictionary<int, NodeInfo> shortestDist = new Dictionary<int, NodeInfo>();
-
-            //init the distances to each node from the starting node
-            foreach (var cnodeID in nodesToSearch)
+            Dictionary<int, bool> closedSet = new Dictionary<int, bool>();
+            foreach (int id in nodesToSearch.Keys)
             {
-                shortestDist.Add(cnodeID.Key, new NodeInfo(Int32.MaxValue, Int32.MaxValue));
+                closedSet.Add(id, false);
             }
-            shortestDist[start.ID] = new NodeInfo(0, 0);
+            HashSet<int> openSet = new HashSet<int>();
 
+            //starting node is in the open set
+            openSet.Add(start.ID);
 
-            int currNodeID = start.ID;
-            openList.Add(currNodeID);
+            // For each clusternode, which clusternode it can most efficiently be reached from.
+            // If a cnode can be reached from many cnodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
 
-            //since we know that a path exist between start and end cluster, 
-            //we can be sure this loop will break when a path is found.
-            while (true) 
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch.Keys)
             {
-                //add all neighbors into the open list
-                foreach (var n in nodesToSearch[currNodeID].neighbors)
+                gScore.Add(nodeID, float.MaxValue);
+            }
+            // The cost of going from start to start is zero.
+            gScore[start.ID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch.Keys)
+            {
+                fScore.Add(nodeID, float.MaxValue);
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[start.ID] = H_PRA(start.ID, layer, end);
+
+            int currNode = 0; //default value
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i]).FirstOrDefault();
+                if (currNode == end.ID)
                 {
-                    if (closedList.Contains(n.Key) || !nodesToSearch.ContainsKey(n.Key))
-                    {
-                        continue;
-                    }
-
-                    if (!openList.Contains(n.Key))
-                    {
-                        openList.Add(n.Key);
-                    }
-
-                    //setting Parent
-                    if (shortestDist[n.Key].Parent == Int32.MaxValue)
-                    {
-                        shortestDist[n.Key].Parent = currNodeID;
-                    }
-                    
-                    //check if the path for neighbor would be shorter if the path went through current node
-                    //if yes, set neighbor's new parent and new pathcost
-                    else if (shortestDist[n.Key].PathCost + nodesToSearch[currNodeID].neighborDist[n.Key] < shortestDist[n.Key].PathCost)
-                    {
-                        shortestDist[n.Key].Parent = currNodeID;
-                        shortestDist[n.Key].PathCost = shortestDist[n.Key].PathCost + nodesToSearch[currNodeID].neighborDist[n.Key];
-                        continue;
-                    }
-
-                    //setting pathCost
-                    if (shortestDist[n.Key].PathCost == Int32.MaxValue)
-                    {
-                        shortestDist[n.Key].PathCost = nodesToSearch[n.Key].neighborDist[currNodeID];// n.Value;
-                    }
-                    else
-                    {
-                        shortestDist[n.Key].PathCost += nodesToSearch[n.Key].neighborDist[currNodeID];
-                    }
-                }
-                closedList.Add(currNodeID);
-                //calculate F for all neighbors (G + H)
-                Dictionary<int, double> F = new Dictionary<int, double>();
-                foreach (var n in openList)
-                {
-                    F.Add(n, shortestDist[n].PathCost/*G(n)*/ + H_PRA(n, layer, end));
-                }
-                
-                //choose the lowest F node (LFN)  (O(n))
-                currNodeID = F.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
-
-                //drop the LFN from the open list and add it to the closed list
-                openList.Remove(currNodeID);
-                closedList.Add(currNodeID);
-
-                if (currNodeID == end.ID)
-                {
+                    //break the loop and reconstruct path below
                     break;
                 }
-            }
 
-            sol.Add(currNodeID);
-            //NOT counting pathcost here, since this is still a high-level abstraction
+                openSet.Remove(currNode);
+                closedSet[currNode] = true; //"added" to closedList
 
-            int parentID = end.ID;
-            while (parentID != start.ID)
-            {
-                parentID = shortestDist[parentID].Parent;
-                //pathCost += shortestDist[parentID].PathCost;
-
-                if (parentID == Int32.MaxValue)
+                foreach (var neighbor in nodesToSearch[currNode].neighbors)
                 {
-                    break;
+                    // Ignore the neighbor which is already evaluated.
+                    if (!closedSet.ContainsKey(neighbor.Key) || closedSet[neighbor.Key] == true)
+                    { continue; }
+
+                    // The distance from start to a neighbor
+                    float tentativeG = gScore[currNode] + nodesToSearch[currNode].neighborDist[neighbor.Key]; 
+                    if (!openSet.Contains(neighbor.Key)) // Discover a new node
+                    {
+                        searchedNodes.Add(neighbor.Key);
+                        openSet.Add(neighbor.Key);
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H_PRA(neighbor.Key, layer, end);
                 }
-                sol.Add(parentID);
             }
+            
+            sol.Add(currNode);
+            while (cameFrom.ContainsKey(currNode))
+            {
+                currNode = cameFrom[currNode];
+                sol.Add(currNode);
+            }
+            //NOT setting pathcost since this is still an abstraction layer
+            //pathCost = gScore[gMap.EndNodeID];
+            
+            pathfinder.CancelAsync();
+            invalidater.CancelAsync();
 
             return sol;
         }
@@ -1648,8 +1760,6 @@ namespace Bak
                     pathCost = 0;
                     break;
                 }
-
-                gMap.Nodes[parentID].BackColor = parentID != gMap.StartNodeID && parentID != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[parentID].Type];
                 PathfindingSolution.Add(parentID);
             }
             pathCost = shortestDist[gMap.EndNodeID].PathCost;
@@ -1739,6 +1849,7 @@ namespace Bak
                     if (!openSet.Contains(neighbor.Key)) // Discover a new node
                     {
                         searchedNodes.Add(neighbor.Key);
+                        setSearchedBgColor(neighbor.Key); 
                         openSet.Add(neighbor.Key);
                     }
                     else if (tentativeG >= gScore[neighbor.Key])
@@ -1753,13 +1864,6 @@ namespace Bak
                 }
             }
             
-            //paint visited nodes
-            foreach (var id in searchedNodes)
-            {
-                gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
-            }
-
-
             if (!pathFound)
             {
                 PathfindingSolution.Clear();
@@ -1948,7 +2052,7 @@ namespace Bak
         /// </summary>
         /// <param name="n">Node ID to get to</param>
         /// <returns></returns>
-        private int H(int n)
+        private float H(int n)
         {
             switch (heuristic)
             {
@@ -1956,12 +2060,15 @@ namespace Bak
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
 
                 case Heuristic.DiagonalShortcut:
-                    int D = 10;
-                    int D2 = 14;
-
-                    int dx = Math.Abs(gMap.Nodes[n].Location.X/30 - gMap.Nodes[gMap.EndNodeID].Location.X/30);
-                    int dy = Math.Abs(gMap.Nodes[n].Location.Y/30 - gMap.Nodes[gMap.EndNodeID].Location.Y/30);
-                    return D * (dx + dy) + (D2 - 2 * D) * Math.Min(dx, dy);
+                    
+                    float h = 0;
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y);
+                    if (dx > dy)
+                        h = 1.4f * dy + 1 * (dx - dy);
+                    else
+                        h = 1.4f * dx + 1 * (dy - dx);
+                    return h;
 
                 default:
                     return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
@@ -2185,7 +2292,11 @@ namespace Bak
         {
             gMap.Nodes[currNodeID].BackColor = currNodeID != gMap.StartNodeID && currNodeID != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[currNodeID].Type];
         }
+
+        private void b_stopPathfinding_Click(object sender, EventArgs e)
+        {
+            pathfinder.CancelAsync();
+            invalidater.CancelAsync();
+        }
     }
-
-
 }

@@ -42,7 +42,6 @@
             this.saveMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showHPAClustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.showPRAClustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.b_traversable = new System.Windows.Forms.Button();
             this.b_nontraversable = new System.Windows.Forms.Button();
             this.b_endNode = new System.Windows.Forms.Button();
@@ -68,6 +67,8 @@
             this.panel = new System.Windows.Forms.Panel();
             this.label6 = new System.Windows.Forms.Label();
             this.l_pathCost = new System.Windows.Forms.Label();
+            this.chb_cChange = new System.Windows.Forms.CheckBox();
+            this.b_stopPathfinding = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -183,8 +184,7 @@
             // clustersToolStripMenuItem
             // 
             this.clustersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.showHPAClustersToolStripMenuItem,
-            this.showPRAClustersToolStripMenuItem});
+            this.showHPAClustersToolStripMenuItem});
             this.clustersToolStripMenuItem.Name = "clustersToolStripMenuItem";
             this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 25);
             this.clustersToolStripMenuItem.Text = "Clusters";
@@ -192,16 +192,9 @@
             // showHPAClustersToolStripMenuItem
             // 
             this.showHPAClustersToolStripMenuItem.Name = "showHPAClustersToolStripMenuItem";
-            this.showHPAClustersToolStripMenuItem.Size = new System.Drawing.Size(228, 28);
+            this.showHPAClustersToolStripMenuItem.Size = new System.Drawing.Size(226, 28);
             this.showHPAClustersToolStripMenuItem.Text = "Show HPA* clusters";
             this.showHPAClustersToolStripMenuItem.Click += new System.EventHandler(this.showHPAClustersToolStripMenuItem_Click);
-            // 
-            // showPRAClustersToolStripMenuItem
-            // 
-            this.showPRAClustersToolStripMenuItem.Name = "showPRAClustersToolStripMenuItem";
-            this.showPRAClustersToolStripMenuItem.Size = new System.Drawing.Size(228, 28);
-            this.showPRAClustersToolStripMenuItem.Text = "Show PRA* Clusters";
-            this.showPRAClustersToolStripMenuItem.Click += new System.EventHandler(this.showPRAClustersToolStripMenuItem_Click);
             // 
             // b_traversable
             // 
@@ -268,9 +261,9 @@
             this.b_startPathFinding.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
             this.b_startPathFinding.Location = new System.Drawing.Point(14, 90);
             this.b_startPathFinding.Name = "b_startPathFinding";
-            this.b_startPathFinding.Size = new System.Drawing.Size(188, 25);
+            this.b_startPathFinding.Size = new System.Drawing.Size(90, 25);
             this.b_startPathFinding.TabIndex = 5;
-            this.b_startPathFinding.Text = "Start PathFinding";
+            this.b_startPathFinding.Text = "START";
             this.b_startPathFinding.UseVisualStyleBackColor = false;
             this.b_startPathFinding.Click += new System.EventHandler(this.b_startPathFinding_Click);
             // 
@@ -288,7 +281,7 @@
             "BackTrack"});
             this.c_selectedPathfinding.Location = new System.Drawing.Point(15, 61);
             this.c_selectedPathfinding.Name = "c_selectedPathfinding";
-            this.c_selectedPathfinding.Size = new System.Drawing.Size(188, 24);
+            this.c_selectedPathfinding.Size = new System.Drawing.Size(185, 24);
             this.c_selectedPathfinding.TabIndex = 6;
             // 
             // label1
@@ -351,7 +344,7 @@
             this.b_mapRefresh.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.b_mapRefresh.Location = new System.Drawing.Point(14, 124);
             this.b_mapRefresh.Name = "b_mapRefresh";
-            this.b_mapRefresh.Size = new System.Drawing.Size(188, 25);
+            this.b_mapRefresh.Size = new System.Drawing.Size(186, 25);
             this.b_mapRefresh.TabIndex = 13;
             this.b_mapRefresh.Text = "Refresh map";
             this.b_mapRefresh.UseVisualStyleBackColor = true;
@@ -470,11 +463,36 @@
             this.l_pathCost.TabIndex = 21;
             this.l_pathCost.Text = "- - -";
             // 
+            // chb_cChange
+            // 
+            this.chb_cChange.AutoSize = true;
+            this.chb_cChange.Location = new System.Drawing.Point(785, 137);
+            this.chb_cChange.Name = "chb_cChange";
+            this.chb_cChange.Size = new System.Drawing.Size(154, 20);
+            this.chb_cChange.TabIndex = 22;
+            this.chb_cChange.Text = "Notify cluster change";
+            this.chb_cChange.UseVisualStyleBackColor = true;
+            // 
+            // b_stopPathfinding
+            // 
+            this.b_stopPathfinding.BackColor = System.Drawing.SystemColors.ScrollBar;
+            this.b_stopPathfinding.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.b_stopPathfinding.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.b_stopPathfinding.Location = new System.Drawing.Point(110, 91);
+            this.b_stopPathfinding.Name = "b_stopPathfinding";
+            this.b_stopPathfinding.Size = new System.Drawing.Size(90, 25);
+            this.b_stopPathfinding.TabIndex = 23;
+            this.b_stopPathfinding.Text = "STOP";
+            this.b_stopPathfinding.UseVisualStyleBackColor = false;
+            this.b_stopPathfinding.Click += new System.EventHandler(this.b_stopPathfinding_Click);
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1090, 741);
+            this.Controls.Add(this.b_stopPathfinding);
+            this.Controls.Add(this.chb_cChange);
             this.Controls.Add(this.l_pathCost);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.tb_nodeInfo);
@@ -546,7 +564,8 @@
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label l_pathCost;
         private System.Windows.Forms.ToolStripMenuItem x700ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem showPRAClustersToolStripMenuItem;
+        private System.Windows.Forms.CheckBox chb_cChange;
+        private System.Windows.Forms.Button b_stopPathfinding;
     }
 }
 

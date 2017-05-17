@@ -138,6 +138,12 @@
     <None Include="GMaps\unreachable.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="GMaps\warcraft3\battleground.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\warcraft3\drywatergulch.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

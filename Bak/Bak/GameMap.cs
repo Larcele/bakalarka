@@ -28,6 +28,7 @@ namespace Bak
 
         public Dictionary<char, NodeType> CharToNodeType = new Dictionary<char, NodeType>
         {
+            {'S', NodeType.Obstacle },
             {'T', NodeType.Obstacle },
             {'.', NodeType.Traversable },
             {'@', NodeType.Obstacle },
