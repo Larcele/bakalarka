@@ -1,0 +1,44 @@
+*******************************
+RESULTS
+*******************************
+Map name: brc503d (Dragon Age: Origins Brecillian Forrest [300 x 400])
+startNodeID: 1185;  EndNodeID: 81916;
+A* (diagonal shortcut) : 	PathCost = 365,1998; Time(ms) = 1359,3085
+A* (manhattan) : 			PathCost = 359,1997; Time(ms) = 436,2535
+Dijkstra: 					PathCost = 320,7798; Time(ms) = 512542,8772
+PRA*(diagonal shortcut) : 	PathCost = ; Time(ms) = 
+
+A*(diagonal shortcut) path degradation: 	12,8%
+A*(manhattan) path degradation: 			10,7%
+PRA*(diagonal shortcut) path degradation:
+PRA*(diagonal shortcut) path degradation:
+
+*************************************************
+Map name: map09 (custom Heroes III map [200 x 200])
+startNodeID: 28398;  EndNodeID: 2211;
+A* (diagonal shortcut) : 	PathCost = 324,2437; Time(ms) = 312,3595
+A* (manhattan) : 			PathCost = 358,3993; Time(ms) = 290,1497
+Dijkstra: 					PathCost = 281,9998; Time(ms) = 111132,7183
+PRA*(diagonal shortcut) : 	PathCost = 345,9997; Time(ms) = 100,1595
+PRA*(manhattan) : 			PathCost = 349,3997; Time(ms) = 102,7818
+
+A*(diagonal shortcut) path degradation: 	13,1%
+A*(manhattan) path degradation: 			21,3%
+PRA*(diagonal shortcut) path degradation:	18,5%
+PRA*(manhattan) path degradation:	19,3%
+
+*************************************************
+Map name: map08 (Dragon Age: Origins, Carta Hideout [100 x 100])
+startNodeID: 405;  EndNodeID: 9586;
+A* (diagonal shortcut) : 	PathCost = 208,3999; Time(ms) = 141,4223
+A* (manhattan) : 			PathCost = 191,7999; Time(ms) = 136,84
+Dijkstra: 					PathCost = 173,3999; Time(ms) = 2326,4488
+PRA*(diagonal shortcut) : 	PathCost = 216,1999; Time(ms) = 34,0415
+PRA*(manhattan) : 			PathCost = 224,3999; Time(ms) = 31,8158
+
+A*(diagonal shortcut) path degradation: 	16,8%
+A*(manhattan) path degradation: 			9,6%
+PRA*(diagonal shortcut) path degradation:	19,7%
+PRA*(manhattan) path degradation:			22,8%
+
+*************************************************
