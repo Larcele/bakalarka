@@ -68,7 +68,6 @@
             this.label6 = new System.Windows.Forms.Label();
             this.l_pathCost = new System.Windows.Forms.Label();
             this.chb_cChange = new System.Windows.Forms.CheckBox();
-            this.b_stopPathfinding = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -261,9 +260,9 @@
             this.b_startPathFinding.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
             this.b_startPathFinding.Location = new System.Drawing.Point(14, 90);
             this.b_startPathFinding.Name = "b_startPathFinding";
-            this.b_startPathFinding.Size = new System.Drawing.Size(90, 25);
+            this.b_startPathFinding.Size = new System.Drawing.Size(186, 25);
             this.b_startPathFinding.TabIndex = 5;
-            this.b_startPathFinding.Text = "START";
+            this.b_startPathFinding.Text = "Start Pathfinding";
             this.b_startPathFinding.UseVisualStyleBackColor = false;
             this.b_startPathFinding.Click += new System.EventHandler(this.b_startPathFinding_Click);
             // 
@@ -473,25 +472,11 @@
             this.chb_cChange.Text = "Notify cluster change";
             this.chb_cChange.UseVisualStyleBackColor = true;
             // 
-            // b_stopPathfinding
-            // 
-            this.b_stopPathfinding.BackColor = System.Drawing.SystemColors.ScrollBar;
-            this.b_stopPathfinding.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.b_stopPathfinding.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.b_stopPathfinding.Location = new System.Drawing.Point(110, 91);
-            this.b_stopPathfinding.Name = "b_stopPathfinding";
-            this.b_stopPathfinding.Size = new System.Drawing.Size(90, 25);
-            this.b_stopPathfinding.TabIndex = 23;
-            this.b_stopPathfinding.Text = "STOP";
-            this.b_stopPathfinding.UseVisualStyleBackColor = false;
-            this.b_stopPathfinding.Click += new System.EventHandler(this.b_stopPathfinding_Click);
-            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1090, 741);
-            this.Controls.Add(this.b_stopPathfinding);
             this.Controls.Add(this.chb_cChange);
             this.Controls.Add(this.l_pathCost);
             this.Controls.Add(this.label6);
@@ -565,7 +550,6 @@
         private System.Windows.Forms.Label l_pathCost;
         private System.Windows.Forms.ToolStripMenuItem x700ToolStripMenuItem;
         private System.Windows.Forms.CheckBox chb_cChange;
-        private System.Windows.Forms.Button b_stopPathfinding;
     }
 }
 
