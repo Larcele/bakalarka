@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -14,6 +15,9 @@ namespace Bak
 {
     public partial class MainWindow : Form
     {
+        int agentPosition = 0;
+        int agentSpeed = 500; //ms
+
         private Stopwatch stopWatch;
         private Node lastNodeInfo;
         private float pathCost = 0;
@@ -26,6 +30,8 @@ namespace Bak
 
         BackgroundWorker pathfinder;
         BackgroundWorker invalidater;
+
+        System.Threading.Timer agent;
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
@@ -104,6 +110,12 @@ namespace Bak
 
         private void checkPRAClusters(Node node)
         {
+            if (PRAstarHierarchy.Count == 0)
+            {
+                MessageBox.Show("PRA clusters are not generated. Please generate the abstraction hierarchy.");
+                return;
+            }
+
             //if only an end point or start point were changed, 
             //we only need to change their PRAClusterParent (PRC) property.
             //O(n)
@@ -151,6 +163,8 @@ namespace Bak
                     {
                         PRAbstractionLayer l = PRAstarHierarchy[level];
                         PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
+                        l.LastAssignedClusterID++;//RAISE ID!!!
+
                         c.calculateXY(gMap.Nodes);
                         l.AddClusterNode(c);
                         
@@ -233,33 +247,7 @@ namespace Bak
                         return;
                     }
                 }
-
-                /*if (cliques.Count > 0)
-                {
-
-                    PRAClusterNode c = cliques[0]; //pick an orphan. doesn't matter which one really.
-                    c.innerNodes.Add(node.ID);
-                    c.calculateXY(gMap.Nodes); //recalculate center X/Y points
-
-                    //create edges between the clusters, if they do not exist
-                    c.AddNeighbors(neighborClusters);
-                    c.recalculateNeighborsHDist();
-
-                    foreach (var n in neighborClusters)
-                    {
-                        n.AddNeighbor(c.ID, c);
-                        n.recalculateNeighborsHDist();
-                    }
-
-                    //set the PRACLusterParent
-                    node.PRAClusterParent = c.ID;
-
-                    //recalculate all higher abstraction layers
-                    recalculatePRALayers();
-
-                    return;
-
-                }*/
+                
                 #endregion
 
                 //3) -> all previous actions failed, so we proceed to create a new node and connect it.
@@ -268,6 +256,9 @@ namespace Bak
                 
                 PRAClusterNode newNode = new PRAClusterNode(0, PRAstarHierarchy[0].LastAssignedClusterID, new List<int>() { node.ID });
                 newNode.calculateXY(gMap.Nodes); //recalculate center X/Y points
+
+                //RAISE THE ID!!!!
+                PRAstarHierarchy[0].LastAssignedClusterID++;
 
                 //create edges between the clusters, if they do not exist
                 newNode.AddNeighbors(neighborClusters);
@@ -295,12 +286,74 @@ namespace Bak
             }
             else if (node.Type == GameMap.NodeType.Obstacle)
             {
-                //
+                #region blah blah
+                //check their (traversable) neighbors. Cases are following:
+                //1) if a clique was a 4-clique, trivially the clique stays valid.
+                //2) if a clique was a 3-clique, trivially the clique stays valid (since diagonal movement is valid as long as two nodes are
+                //   traversable, their neighbors do not matter)
+                //3) if a clique was a 2-clique, trivially the clique becomes an orphan.
+                //4) if the clique was an orphan, the node is deleted. We remove the node form all previous neighbors
+                // In all cases, we check all the cluster's neighbors if they still nemain neighbors after this change.
+                //then proceed to recompute higher levels.
+                #endregion
+                
+                PRAClusterNode changedCluster = PRAstarHierarchy[0].ClusterNodes[node.PRAClusterParent];
+
+                //now the node is non-traversable, therefore won't belong to a cluster
+                node.PRAClusterParent = -1;
+
+                //orphan
+                if (changedCluster.innerNodes.Count == 1)
+                {
+                    //this node is going to be deleted, so we remove it from its neighbors
+                    foreach (var n in changedCluster.neighbors.Values)
+                    {
+                        n.neighbors.Remove(changedCluster.ID);
+                        n.neighborDist.Remove(changedCluster.ID);
+                    }
+
+                    //we delete the node itself
+                    PRAstarHierarchy[0].ClusterNodes.Remove(changedCluster.ID);
+
+                    //recalculate all higher abstraction layers
+                    recalculatePRALayers();
+
+                    return;
+
+                }
+                //not an orphan
+                else
+                {
+                    changedCluster.innerNodes.Remove(node.ID);
+                    changedCluster.calculateXY(gMap.Nodes);
+
+                    var currNeighbors = getInnerNodeNeighbors(changedCluster, 0);
+                    List<PRAClusterNode> cutOffNeighbors = changedCluster.neighbors.Values.Except(currNeighbors).ToList();
+
+                    //No connections were cut off -> therefore no abstraction rebuilding is necessary
+                    if (cutOffNeighbors.Count() == 0)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        //delet all connections that were cut off
+                        foreach (var n in cutOffNeighbors)
+                        {
+                            changedCluster.neighborDist.Remove(n.ID);
+                            changedCluster.neighbors.Remove(n.ID);
+
+                            n.neighbors.Remove(changedCluster.ID);
+                            n.neighborDist.Remove(changedCluster.ID);
+                        }
+
+                        //recalculate all higher abstraction layers
+                        recalculatePRALayers();
+
+                        return;
+                    }
+                }
             }
-            
-
-
-
         }
         
         private List<PRAClusterNode> GetCliqueOfNeighbors(Node node)
@@ -1192,6 +1245,36 @@ namespace Bak
             }
         }
 
+        private void StartAgent()
+        {
+            //reset position
+            agentPosition = 0;
+            agent = new System.Threading.Timer(MoveAgent, null, agentSpeed, Timeout.Infinite);
+        }
+
+        private void MoveAgent(Object state)
+        {
+            if (agentPosition >= PathfindingSolution.Count)
+            {
+                invalidater.CancelAsync();
+                return;
+            }
+
+            int id = PathfindingSolution[agentPosition];
+            
+            gMap.Nodes[id].BackColor = ColorPalette.NodeColor_Agent;
+
+            if (agentPosition > 0)
+            {
+                int prev = PathfindingSolution[agentPosition - 1];
+                gMap.Nodes[prev].BackColor = ColorPalette.NodeColor_Path;
+            }
+
+            agentPosition++;
+            // Long running operation
+            agent.Change(agentSpeed/2, Timeout.Infinite);
+        }
+
         private void Invalidater_DoWork(object sender, DoWorkEventArgs e)
         {
             while(true)
@@ -1210,11 +1293,11 @@ namespace Bak
             tb_elapsedTime.Text = stopWatch.Elapsed.TotalMilliseconds.ToString();
 
             printSolution();
+            StartAgent();
 
             //Update();
             // Invalidate();
-            //mainPanel.Update();
-            mainPanel.Invalidate();
+            mainPanel.Update();
         }
 
         private void DisablePathFindingdControls()
@@ -1297,13 +1380,17 @@ namespace Bak
 
                 AddToPathfSol(partialPath);
 
+                if (i == abstractPath.Count - 1)
+                {
+                    StartAgent();
+                }
+                
                 //the next start node is going to be the end node of this search. 
                 //since A* path returned is reversed, the first element was the last (end) node.
                 startID = partialPath[0];
             }
             
             pathfinder.CancelAsync();
-            invalidater.CancelAsync();
 
         }
 
@@ -1314,7 +1401,7 @@ namespace Bak
             {
                 PathfindingSolution.Add(partialPath[i]);
                 //set the bg color of the path node
-                setSearchedBgColor(partialPath[i]);
+                gMap.Nodes[partialPath[i]].BackColor = ColorPalette.NodeColor_Path;
             }
         }
 
@@ -1440,9 +1527,6 @@ namespace Bak
                 pathCost += gMap.Nodes[currNode].Neighbors[child];
                 sol.Add(currNode);
             }
-            
-            pathfinder.CancelAsync();
-            invalidater.CancelAsync();
 
             return sol;
 
@@ -1538,9 +1622,6 @@ namespace Bak
             //NOT setting pathcost since this is still an abstraction layer
             //pathCost = gScore[gMap.EndNodeID];
             
-            pathfinder.CancelAsync();
-            invalidater.CancelAsync();
-
             return sol;
         }
 
@@ -1795,7 +1876,6 @@ namespace Bak
             pathCost = shortestDist[gMap.EndNodeID].PathCost;
 
             pathfinder.CancelAsync();
-            invalidater.CancelAsync();
         }
         
         private int closestNeighbor(Dictionary<int, NodeInfo> shortestDistances)
@@ -1901,17 +1981,20 @@ namespace Bak
             }
             else
             {
-                PathfindingSolution.Add(currNode);
+                List<int> reversedPath = new List<int>();
+
+                reversedPath.Add(currNode);
                 while (cameFrom.ContainsKey(currNode))
                 {
                     currNode = cameFrom[currNode];
-                    PathfindingSolution.Add(currNode);
+                    reversedPath.Add(currNode);
                 }
                 pathCost = gScore[gMap.EndNodeID];
+
+                AddToPathfSol(reversedPath);
             }
 
             pathfinder.CancelAsync();
-            invalidater.CancelAsync();
         }
 
         /// <summary>
@@ -2016,23 +2099,19 @@ namespace Bak
 
         private void printSolution()
         {
-            tb_pathOutput.Text = "";
+            tb_pathLength.Text = PathfindingSolution.Count+"";
 
             if (PathfindingSolution.Count == 0)
             {
-                tb_pathOutput.Text = "No solution";
+                tb_pathLength.Text = "No solution";
                 l_pathCost.Text = "- - - ";
                 return;
             }
-
-            StringBuilder s = new StringBuilder();
+            
             foreach (int id in PathfindingSolution)
             {
-                s.Append(id + ", ");
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
-
-            tb_pathOutput.Text = s.ToString();
             l_pathCost.Text = pathCost.ToString();
         }
 
@@ -2158,12 +2237,6 @@ namespace Bak
         private void setSearchedBgColor(int currNodeID)
         {
             gMap.Nodes[currNodeID].BackColor = currNodeID != gMap.StartNodeID && currNodeID != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[currNodeID].Type];
-        }
-
-        private void b_stopPathfinding_Click(object sender, EventArgs e)
-        {
-            pathfinder.CancelAsync();
-            invalidater.CancelAsync();
         }
     }
 }

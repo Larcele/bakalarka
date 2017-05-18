@@ -14,6 +14,7 @@ namespace Bak
         internal static Color NodeColor_Visited = Color.FromArgb(20, 70, 20);
         internal static Color NodeColor_Obstacle = Color.FromArgb(95, 81, 41);
         internal static Color NodeColor_Start = Color.FromArgb(210, 35, 35);
+        internal static Color NodeColor_Agent = NodeColor_Start;
         internal static Color NodeColor_End = Color.FromArgb(242, 196, 73); 
 
         internal static Dictionary<GameMap.NodeType, Color> NodeTypeColor = new Dictionary<GameMap.NodeType, Color>
