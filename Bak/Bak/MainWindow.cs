@@ -1861,18 +1861,22 @@ namespace Bak
             }
             
             int parentID = gMap.EndNodeID;
+            List<int> reversedPath = new List<int>();
+            reversedPath.Add(parentID);
             while (parentID != gMap.StartNodeID)
             {
                 parentID = shortestDist[parentID].Parent;
                 if (parentID == Int32.MaxValue)
                 {
                     //no path
-                    PathfindingSolution.Clear();
+                    reversedPath.Clear();
                     pathCost = 0;
                     break;
                 }
-                PathfindingSolution.Add(parentID);
+                reversedPath.Add(parentID);
             }
+            AddToPathfSol(reversedPath);
+
             pathCost = shortestDist[gMap.EndNodeID].PathCost;
 
             pathfinder.CancelAsync();
