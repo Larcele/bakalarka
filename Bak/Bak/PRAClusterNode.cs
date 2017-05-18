@@ -99,6 +99,14 @@ namespace Bak
             }
         }
 
+        internal void recalculateNeighborsHDist()
+        {
+            foreach (var n in neighbors)
+            {
+                calculateHDist(n.Value);
+            }
+        }
+
         /// <summary>
         /// Remembers the PRACluster as a Neighbor. If it already is a neighbor, returns and does nothing.
         /// </summary>
@@ -123,7 +131,15 @@ namespace Bak
 
                 float dist = 1.4f * Math.Min(dx, dy) + Math.Abs(dx - dy);
 
-                this.neighborDist.Add(neighbor.ID, dist);
+                //add if doesnt exist
+                if (!this.neighborDist.ContainsKey(neighbor.ID))
+                {
+                    this.neighborDist.Add(neighbor.ID, dist);
+                }
+                else //update value
+                {
+                    this.neighborDist[neighbor.ID] = dist;
+                }
             }
             
         }

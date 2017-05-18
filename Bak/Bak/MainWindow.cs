@@ -83,8 +83,16 @@ namespace Bak
             {
                 if (node.IsHit(e.X, e.Y))
                 {
-                    node.InvokeNodeClick(e);
-                    //checkPRAClusters(node);
+                    if (e.Button == MouseButtons.Right)
+                    {
+                        node.InvokeNodeClick(e);
+                    }
+                    //else left button
+                    else if (gMap.EditingNodeMode != node.Type)
+                    {
+                        node.InvokeNodeClick(e);
+                        checkPRAClusters(node);
+                    }
                     break;
                 }
             }
@@ -141,73 +149,149 @@ namespace Bak
 
                     while (level <= PRAstarHierarchy.Count - 1)
                     {
-                        #region the same but retarded
-                        /*if (level == 0)
-                        {
-                            PRAbstractionLayer l = PRAstarHierarchy[level];
-                            PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { node.ID });
-                            l.AddClusterNode(c);
-
-                            node.PRAClusterParent = c.ID;
-                            prevClusterID = c.ID;
-                        }
-                        else
-                        {
-                            PRAbstractionLayer l = PRAstarHierarchy[level];
-                            PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
-                            l.AddClusterNode(c);
-
-                            prevClusterID = c.ID;
-                        }*/
-                        #endregion
-
                         PRAbstractionLayer l = PRAstarHierarchy[level];
                         PRAClusterNode c = new PRAClusterNode(level, l.LastAssignedClusterID, new List<int> { prevClusterID });
                         c.calculateXY(gMap.Nodes);
                         l.AddClusterNode(c);
-
-                        prevClusterID = c.ID;
-
+                        
                         if (level == 0) { node.PRAClusterParent = c.ID; }
                         else
                         {
-                            PRAClusterNode parent = PRAstarHierarchy[level - 1].ClusterNodes[prevClusterID];
-                            c.PRAClusterParent = parent.ID;
+                            PRAClusterNode prev = PRAstarHierarchy[level - 1].ClusterNodes[prevClusterID];
+                            prev.PRAClusterParent = c.ID;
                         }
+                        prevClusterID = c.ID;
 
                         level++;
                     }
+
+                    return;
                 }
                 #endregion
 
                 //1) -> check for orphan(s)
 
                 #region connect to existing orphan
-                var orphans = neighborClusters.Where(c => c.neighbors.Count == 1).ToList();
+
+                var orphans = neighborClusters.Where(c => c.innerNodes.Count == 1).ToList();
                 if (orphans.Count > 0)
                 {
                     PRAClusterNode c = orphans[0]; //pick an orphan. doesn't matter which one really.
                     c.innerNodes.Add(node.ID);
+                    c.calculateXY(gMap.Nodes); //recalculate center X/Y points
+
                     //create edges between the clusters, if they do not exist
                     c.AddNeighbors(neighborClusters);
+                    c.recalculateNeighborsHDist();
+
                     foreach (var n in neighborClusters)
                     {
                         n.AddNeighbor(c.ID, c);
+                        n.recalculateNeighborsHDist();
                     }
+                    
                     //set the PRACLusterParent
                     node.PRAClusterParent = c.ID;
 
-                    //set connections between parent clusters too
-                    int absLayer = 1;
-                    while (absLayer <= PRAstarHierarchy.Count - 1)
-                    {
-                        absLayer++;
-                    }
+                    //recalculate all higher abstraction layers
+                    recalculatePRALayers();
+
+                    return;
 
                 }
                 #endregion
 
-                //
+                //2) -> check for 2-cliques and 3-cliques
+
+                #region connect to existing clique
+
+                var cliques = neighborClusters.Where(c => c.innerNodes.Count > 1 && c.innerNodes.Count < 4).ToList();
+                foreach (var c in cliques)
+                {
+                    //check if adding node to this clique would make it a valid n+1 clique
+                    if (wouldBeValidClique(node.ID, c.innerNodes))
+                    {
+                        c.innerNodes.Add(node.ID);
+                        c.calculateXY(gMap.Nodes); //recalculate center X/Y points
+                                                   
+                        //create edges between the clusters, if they do not exist
+                        c.AddNeighbors(neighborClusters);
+                        c.recalculateNeighborsHDist();
+
+                        foreach (var n in neighborClusters)
+                        {
+                            n.AddNeighbor(c.ID, c);
+                            n.recalculateNeighborsHDist();
+                        }
+
+                        //set the PRACLusterParent
+                        node.PRAClusterParent = c.ID;
+
+                        //recalculate all higher abstraction layers
+                        recalculatePRALayers();
+
+                        return;
+                    }
+                }
+
+                /*if (cliques.Count > 0)
+                {
+
+                    PRAClusterNode c = cliques[0]; //pick an orphan. doesn't matter which one really.
+                    c.innerNodes.Add(node.ID);
+                    c.calculateXY(gMap.Nodes); //recalculate center X/Y points
+
+                    //create edges between the clusters, if they do not exist
+                    c.AddNeighbors(neighborClusters);
+                    c.recalculateNeighborsHDist();
+
+                    foreach (var n in neighborClusters)
+                    {
+                        n.AddNeighbor(c.ID, c);
+                        n.recalculateNeighborsHDist();
+                    }
+
+                    //set the PRACLusterParent
+                    node.PRAClusterParent = c.ID;
+
+                    //recalculate all higher abstraction layers
+                    recalculatePRALayers();
+
+                    return;
+
+                }*/
+                #endregion
+
+                //3) -> all previous actions failed, so we proceed to create a new node and connect it.
+
+                #region new orphan node
+                
+                PRAClusterNode newNode = new PRAClusterNode(0, PRAstarHierarchy[0].LastAssignedClusterID, new List<int>() { node.ID });
+                newNode.calculateXY(gMap.Nodes); //recalculate center X/Y points
+
+                //create edges between the clusters, if they do not exist
+                newNode.AddNeighbors(neighborClusters);
+                newNode.recalculateNeighborsHDist();
+
+                foreach (var n in neighborClusters)
+                {
+                    n.AddNeighbor(newNode.ID, newNode);
+                    n.recalculateNeighborsHDist();
+                }
+
+                //set the PRACLusterParent
+                node.PRAClusterParent = newNode.ID;
+
+                //add node to layer
+                PRAstarHierarchy[0].AddClusterNode(newNode);
+
+                //recalculate all higher abstraction layers
+                recalculatePRALayers();
+
+                return;
+
+                #endregion
+
             }
             else if (node.Type == GameMap.NodeType.Obstacle)
             {
@@ -218,7 +302,7 @@ namespace Bak
 
 
         }
-
+        
         private List<PRAClusterNode> GetCliqueOfNeighbors(Node node)
         {
             List<PRAClusterNode> clusterNeighbors = new List<PRAClusterNode>();
@@ -562,6 +646,18 @@ namespace Bak
             }
             return res;
         }
+        
+        private void recalculatePRALayers()
+        {
+            //remember the first
+            PRAbstractionLayer baseL = PRAstarHierarchy[0];
+
+            PRAstarHierarchy.Clear();
+            PRAstarHierarchy.Add(baseL.ID, baseL);
+
+            //rebuild anew
+            buildPRALayers();
+        }
 
         private void buildPRALayers()
         {
@@ -739,6 +835,40 @@ namespace Bak
                 index++;
             }
             return res;
+        }
+
+        private bool wouldBeValidClique(int nodeToAdd, List<int> nodeIDs)
+        {
+            int cliqueSize = nodeIDs.Count + 1;
+            if (cliqueSize == 3)
+            {
+                int n0 = nodeIDs[0];
+                int n1 = nodeIDs[1];
+
+                if (gMap.Nodes[nodeToAdd].AreNeighbors(n0, n1) && AreTraversable(nodeToAdd, n0, n1))
+                {
+                    return true;
+                }
+                else return false;
+            }
+            else if (cliqueSize == 4)
+            {
+                int n0 = nodeIDs[0];
+                int n1 = nodeIDs[1];
+                int n2 = nodeIDs[2];
+
+                if (gMap.Nodes[nodeToAdd].AreNeighbors(n0, n1, n2) && AreTraversable(nodeToAdd, n0, n1, n2))
+                {
+                    return true;
+                }
+                else return false;
+            }
+            else
+            {
+                MessageBox.Show("Cique size: " + cliqueSize + " seems invalid here...");
+                return false;
+            }
+            
         }
 
         /// <summary>
