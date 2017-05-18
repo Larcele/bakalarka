@@ -11,7 +11,7 @@ PRA*(diagonal shortcut) : 	PathCost = ; Time(ms) =
 A*(diagonal shortcut) path degradation: 	12,8%
 A*(manhattan) path degradation: 			10,7%
 PRA*(diagonal shortcut) path degradation:
-PRA*(diagonal shortcut) path degradation:
+PRA*(manhattan) path degradation:
 
 *************************************************
 Map name: map09 (custom Heroes III map [200 x 200])
@@ -25,7 +25,7 @@ PRA*(manhattan) : 			PathCost = 349,3997; Time(ms) = 102,7818
 A*(diagonal shortcut) path degradation: 	13,1%
 A*(manhattan) path degradation: 			21,3%
 PRA*(diagonal shortcut) path degradation:	18,5%
-PRA*(manhattan) path degradation:	19,3%
+PRA*(manhattan) path degradation:			19,3%
 
 *************************************************
 Map name: map08 (Dragon Age: Origins, Carta Hideout [100 x 100])
@@ -40,5 +40,19 @@ A*(diagonal shortcut) path degradation: 	16,8%
 A*(manhattan) path degradation: 			9,6%
 PRA*(diagonal shortcut) path degradation:	19,7%
 PRA*(manhattan) path degradation:			22,8%
+
+*************************************************
+Map name: drywatergulch (Warcraft III [512x512])
+startNodeID: 240586;  EndNodeID: 31797;
+A* (diagonal shortcut) : 	PathCost = 634,5989; Time(ms) = 1481,5555
+A* (manhattan) : 			PathCost = 634,5989; Time(ms) = 1589,5224
+Dijkstra: 					PathCost = 634,5989 (516 length); Time(ms) = 3347729,1941 (55 min)
+PRA*(diagonal shortcut) : 	PathCost = 725,2012; Time(ms) = 597,3826
+PRA*(manhattan) : 			PathCost = 733,2017; Time(ms) = 601,7119
+
+A*(diagonal shortcut) path degradation: 	0%
+A*(manhattan) path degradation: 			0%
+PRA*(diagonal shortcut) path degradation:	12,5%
+PRA*(manhattan) path degradation:			13,5%
 
 *************************************************

@@ -17,6 +17,7 @@ namespace Bak
     {
         int agentPosition = 0;
         int agentSpeed = 500; //ms
+        int counter = 0;
 
         private Stopwatch stopWatch;
         private Node lastNodeInfo;
@@ -35,7 +36,7 @@ namespace Bak
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
-        string FilePath = "GMaps\\simple.gmap";
+        string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "GMaps", "map03.gmap");
 
         GameMap gMap;
         public MainWindow()
@@ -75,6 +76,7 @@ namespace Bak
             editingModesButton_Click(b_nontraversable, null);
 
             BuildHPAClusters();
+            BuildPRAbstractMap();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -1249,11 +1251,14 @@ namespace Bak
         {
             //reset position
             agentPosition = 0;
+            //reset counter
+            counter = 0;
             agent = new System.Threading.Timer(MoveAgent, null, agentSpeed, Timeout.Infinite);
         }
 
         private void MoveAgent(Object state)
         {
+
             if (agentPosition >= PathfindingSolution.Count)
             {
                 invalidater.CancelAsync();
@@ -1271,7 +1276,8 @@ namespace Bak
             }
 
             agentPosition++;
-            // Long running operation
+            counter++;
+
             agent.Change(agentSpeed/2, Timeout.Infinite);
         }
 
@@ -1399,9 +1405,21 @@ namespace Bak
             //since A* traces the path from the end to start by assigned parent nodes, we need to reverse it.
             for (int i = partialPath.Count - 1; i >= 0; i--)
             {
-                PathfindingSolution.Add(partialPath[i]);
-                //set the bg color of the path node
-                gMap.Nodes[partialPath[i]].BackColor = ColorPalette.NodeColor_Path;
+                if (PathfindingSolution.Count == 0)
+                {
+                    PathfindingSolution.Add(partialPath[i]);
+                    //set the bg color of the path node
+                    gMap.Nodes[partialPath[i]].BackColor = ColorPalette.NodeColor_Path;
+                }
+                else
+                {
+                    if (PathfindingSolution[PathfindingSolution.Count - 1] != partialPath[i])
+                    {
+                        PathfindingSolution.Add(partialPath[i]);
+                        //set the bg color of the path node
+                        gMap.Nodes[partialPath[i]].BackColor = ColorPalette.NodeColor_Path;
+                    }
+                }
             }
         }
 
@@ -1621,6 +1639,8 @@ namespace Bak
             }
             //NOT setting pathcost since this is still an abstraction layer
             //pathCost = gScore[gMap.EndNodeID];
+            pathfinder.CancelAsync();
+            //invalidater.CancelAsync();
             
             return sol;
         }
@@ -1902,7 +1922,7 @@ namespace Bak
 
         private void StartAstarSearch(object sender, DoWorkEventArgs e)
         {
-            bool[] closedSet = new bool[gMap.Nodes.Count];
+            HashSet<int> closedSet = new HashSet<int>();
             HashSet<int> openSet = new HashSet<int>();
 
             //starting node is in the open set
@@ -1950,12 +1970,12 @@ namespace Bak
                 }
 
                 openSet.Remove(currNode);
-                closedSet[currNode] = true; //"added" to closedList
+                closedSet.Add(currNode); //"added" to closedList
 
                 foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
                 {
                     // Ignore the neighbor which is already evaluated or it is non-traversable.
-                    if (gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet[neighbor.Key] == true)
+                    if (gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet.Contains(neighbor.Key))
                     { continue; }
 
                     float tentativeG = gScore[currNode] + neighbor.Value; // The distance from start to a neighbor
