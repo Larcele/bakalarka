@@ -1370,10 +1370,14 @@ namespace Bak
                 Node n = gMap.Nodes[swap.Key];
                 gMap.EditingNodeMode = swap.Value;
 
-                n.Node_Click();
-
-                //check ONLY the base cluster, withouth rebuilding the whole abstraction
-                checkPRAClusters(n, false);
+                //ONLY invoke if node was non-traversable and now should be traversable and vice versa.
+                //is buggy if trying to make a (non)traversable node from a (previously as well) (non)traversable node
+                if (n.Type != swap.Value)
+                {
+                    n.Node_Click();
+                    //check ONLY the base cluster, withouth rebuilding the whole abstraction
+                    checkPRAClusters(n, false);
+                }
             }
 
             //after applying all swaps, now rebuild the abstraction to a temporary structure
