@@ -16,15 +16,20 @@ namespace Bak
     public partial class MainWindow : Form
     {
         int agentPosition = 0;
-        int agentSpeed = 500; //ms
+        int agentSpeed = 600; //ms
         int counter = 0;
+        bool agentTerminate = false;
 
         private Stopwatch stopWatch;
         private Node lastNodeInfo;
         private float pathCost = 0;
         private Heuristic heuristic;
-
+        private string CurrentMapName = "";
         public PictureBox mainPanel;
+
+        bool testShouldRun = false;
+        TestCase selectedTest;
+        Dictionary<string, List<TestCase>> MapTests = new Dictionary<string, List<TestCase>>();
 
         Dictionary<int, AbstractionLayer> HierarchicalGraph = new Dictionary<int, AbstractionLayer>();
         Dictionary<int, PRAbstractionLayer> PRAstarHierarchy = new Dictionary<int, PRAbstractionLayer>();
@@ -33,6 +38,7 @@ namespace Bak
         BackgroundWorker invalidater;
 
         System.Threading.Timer agent;
+        System.Threading.Timer testRunner;
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
@@ -51,8 +57,12 @@ namespace Bak
                 ControlStyles.DoubleBuffer,
                 true);
 
+            MinimumSize = new Size(800, 600);
+
+            MapTests = TestCaseCreator.GetAllTestCases();
+
             this.Width = 1120;
-            this.Height = 750;
+            this.Height = 700;
 
             c_selectedPathfinding.SelectedIndex = 0;
             pathLed.BackColor = ColorPalette.NodeColor_Path;
@@ -61,9 +71,7 @@ namespace Bak
             mainPanel = pictureBox1;
             mainPanel.Width = 600;
             mainPanel.Height = 600;
-
-            //mainPanel.AutoScroll = true;
-
+            
             mainPanel.Paint += MainPanel_Paint;
             mainPanel.MouseDown += MainPanel_Click;
 
@@ -110,7 +118,7 @@ namespace Bak
             
         }
 
-        private void checkPRAClusters(Node node)
+        private void checkPRAClusters(Node node, bool rebuildAll = true)
         {
             if (PRAstarHierarchy.Count == 0)
             {
@@ -210,7 +218,10 @@ namespace Bak
                     node.PRAClusterParent = c.ID;
 
                     //recalculate all higher abstraction layers
-                    recalculatePRALayers();
+                    if (rebuildAll)
+                    {
+                        recalculatePRALayers();
+                    }
 
                     return;
 
@@ -244,8 +255,10 @@ namespace Bak
                         node.PRAClusterParent = c.ID;
 
                         //recalculate all higher abstraction layers
-                        recalculatePRALayers();
-
+                        if (rebuildAll)
+                        {
+                            recalculatePRALayers();
+                        }
                         return;
                     }
                 }
@@ -279,7 +292,10 @@ namespace Bak
                 PRAstarHierarchy[0].AddClusterNode(newNode);
 
                 //recalculate all higher abstraction layers
-                recalculatePRALayers();
+                if (rebuildAll)
+                {
+                    recalculatePRALayers();
+                }
 
                 return;
 
@@ -318,7 +334,10 @@ namespace Bak
                     PRAstarHierarchy[0].ClusterNodes.Remove(changedCluster.ID);
 
                     //recalculate all higher abstraction layers
-                    recalculatePRALayers();
+                    if (rebuildAll)
+                    {
+                        recalculatePRALayers();
+                    }
 
                     return;
 
@@ -350,8 +369,10 @@ namespace Bak
                         }
 
                         //recalculate all higher abstraction layers
-                        recalculatePRALayers();
-
+                        if (rebuildAll)
+                        {
+                            recalculatePRALayers();
+                        }
                         return;
                     }
                 }
@@ -486,6 +507,27 @@ namespace Bak
                 this.Text = fileDialog.FileName;
                 SetMapSize();
                 MainWindow_Resize(null, null);
+
+                CurrentMapName = Path.GetFileName(fileDialog.FileName);
+                RefreshMaptests();
+
+            }
+        }
+
+        private void RefreshMaptests()
+        {
+            cb_mapTests.Items.Clear();
+
+            //add a default empty item
+            cb_mapTests.Items.Add("No test selected");
+
+            if (MapTests.ContainsKey(CurrentMapName))
+            {
+                List<TestCase> tests = MapTests[CurrentMapName];
+                foreach (var t in tests)
+                {
+                    cb_mapTests.Items.Add(t);
+                }
             }
         }
 
@@ -714,6 +756,7 @@ namespace Bak
             buildPRALayers();
         }
 
+
         private void buildPRALayers()
         {
             //at the start, there is only the first abstraction layer. 
@@ -753,7 +796,7 @@ namespace Bak
                     for (int i = 0; i < nodesToCheckForCliques.Count; ++i)
                     {
                         //check for neighbors if they are a clique with node
-                        if (nodesAreClique(oneLevelLower.ID, node.Value, nodesToCheckForCliques[i]))
+                        if (nodesAreClique(oneLevelLower, node.Value, nodesToCheckForCliques[i]))
                         {
                             //create PCN
                             List<int> innerNodes = new List<int> { node.Key };
@@ -932,13 +975,13 @@ namespace Bak
         /// <param name="node"></param>
         /// <param name="nodes"></param>
         /// <returns></returns>
-        private bool nodesAreClique(int aLayerID, PRAClusterNode node, List<int> nodes)
+        private bool nodesAreClique(PRAbstractionLayer layer, PRAClusterNode node, List<int> nodes)
         {
             //check for 2-clique
             if (nodes.Count == 1)
             {
                 // if [0] -> [2]... then also [2] -> [0]... must be true; Then they are a 2-clique
-                if (node.HasNeighbor(nodes[0]) && PRAstarHierarchy[aLayerID].ClusterNodes[nodes[0]].HasNeighbor(node.ID))
+                if (node.HasNeighbor(nodes[0]) && layer.ClusterNodes[nodes[0]].HasNeighbor(node.ID))
                 {
                     return true;
                 }
@@ -958,7 +1001,7 @@ namespace Bak
                                                       .Select(n1 => n1).ToList();
 
                     neighborsToCheck.Add(node.ID);
-                    if (!PRAstarHierarchy[aLayerID].ClusterNodes[n].HasAllNeighbors(neighborsToCheck))
+                    if (!layer.ClusterNodes[n].HasAllNeighbors(neighborsToCheck))
                     {
                         return false;
                     }
@@ -1145,6 +1188,7 @@ namespace Bak
         
         private void b_startPathFinding_Click(object sender, EventArgs e)
         {
+            testShouldRun = false;
             pathCost = 0;
             PathfindingSolution.Clear();
             searchedNodes.Clear();
@@ -1178,6 +1222,7 @@ namespace Bak
             switch (pathfinding)
             {
                 case "PRA* (Manhattan heuristic)":
+                    testShouldRun = true;
                     heuristic = Heuristic.Manhattan;
                     pathfinder.DoWork += StartPRAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
@@ -1188,6 +1233,7 @@ namespace Bak
                     break;
 
                 case "PRA* (Diagonal shortcut)":
+                    testShouldRun = true;
                     heuristic = Heuristic.DiagonalShortcut;
                     pathfinder.DoWork += StartPRAstarSearch;
                     pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
@@ -1246,23 +1292,28 @@ namespace Bak
                     break;
             }
         }
-
+        
         private void StartAgent()
         {
             //reset position
             agentPosition = 0;
             //reset counter
             counter = 0;
+            agentTerminate = false;
             agent = new System.Threading.Timer(MoveAgent, null, agentSpeed, Timeout.Infinite);
         }
 
         private void MoveAgent(Object state)
         {
-
-            if (agentPosition >= PathfindingSolution.Count)
+            if (agentPosition >= PathfindingSolution.Count || agentTerminate)
             {
                 invalidater.CancelAsync();
                 return;
+            }
+            if (selectedTest != null && testShouldRun && selectedTest.triggerStep == counter)
+            {
+                //notify for test triggering
+                StartTestExecution();
             }
 
             int id = PathfindingSolution[agentPosition];
@@ -1280,6 +1331,253 @@ namespace Bak
 
             agent.Change(agentSpeed/2, Timeout.Infinite);
         }
+        
+        private void StartAstartOnNew()
+        {
+            PathfindingSolution.Clear();
+
+            pathfinder = new BackgroundWorker();
+            pathfinder.WorkerSupportsCancellation = true;
+
+            invalidater = new BackgroundWorker();
+            invalidater.WorkerSupportsCancellation = true;
+
+            //DisablePathFindingdControls();
+
+            pathfinder.DoWork += StartPRAstarSearch;
+            pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
+            pathfinder.RunWorkerAsync();
+
+            invalidater.DoWork += Invalidater_DoWork;
+            invalidater.RunWorkerAsync();
+        }
+
+        #region TMP PRA* LAYER BUILD
+
+        private void StartTestExecution()
+        {
+            testRunner = new System.Threading.Timer(TriggerTest, null, 0, Timeout.Infinite);
+        }
+        private void TriggerTest(object sender)
+        {
+            foreach (var swap in selectedTest.nodeSwaps)
+            {
+                //get the node corresponding to id, set new node state by invoking click
+                Node n = gMap.Nodes[swap.Key];
+                gMap.EditingNodeMode = swap.Value;
+
+                n.Node_Click();
+
+                //check ONLY the base cluster, withouth rebuilding the whole abstraction
+                checkPRAClusters(n, false);
+            }
+
+            //after applying all swaps, now rebuild the abstraction to a temporary structure
+            Dictionary<int, PRAbstractionLayer> tmpLayers = new Dictionary<int, PRAbstractionLayer>();
+            tmpLayers.Add(PRAstarHierarchy[0].ID, PRAstarHierarchy[0]);
+
+            tmpLayers = buildTemporaryPRALayers(tmpLayers);
+
+            PRAstarHierarchy = tmpLayers;
+            //after the rebuild is complete, STOP THE AGENT
+            agentTerminate = true;
+
+            //set a new start point  which is the current agent position
+            Node agentPos = gMap.Nodes[PathfindingSolution[agentPosition]];
+            gMap.StartNodeID = agentPos.ID;
+
+            //remember the path cost from the start to this point
+            //pathCost = sumPath(PathfindingSolution, agentPosition);
+
+            //we prevent the test from looping
+            testShouldRun = false;
+
+            StartAstartOnNew();
+
+        }
+
+        /*private float sumPath(List<int> pathfindingSolution, int agentPosition)
+        {
+            float sum = 0;
+            for (int i = 0; i <= agentPosition; ++i)
+            {
+                sum += 
+            }
+        }*/
+
+        #region tmp cluster building
+        private Dictionary<int, PRAbstractionLayer> buildTemporaryPRALayers(Dictionary<int, PRAbstractionLayer> structure)
+        {
+            //at the start, there is only the first abstraction layer. 
+            //This layer consists of nodes, where a node can contain a 4-clique, 3-clique, 2-clique or be an orphan node.
+            //We continue building layers and abstracting until there is only a single node left.
+
+            int currAbslayerID = 1;
+
+            while (true)
+            {
+                PRAbstractionLayer currentLevel = new PRAbstractionLayer(currAbslayerID);
+                PRAbstractionLayer oneLevelLower = structure[currAbslayerID - 1];
+
+                Dictionary<int, PRAClusterNode> resolvedNodes = new Dictionary<int, PRAClusterNode>();
+
+                //extract the nodes of the previous layer and sort them by their neighbor count
+                Dictionary<int, PRAClusterNode> nodes = oneLevelLower.ClusterNodes.OrderBy(n => n.Value.neighbors.Count)
+                                                                     .ToDictionary(n => n.Key, n => n.Value);
+
+                //a PRAClusterNode *p* is in clique with other PCNs if each of (or a subset of)
+                //the neighbors  of *p* contains all other (or the same subset o ) neighbors and also *p*
+                //Example: PCNs 0,2 and 4 are in a clique if  [0] -> [2][4] && [2] -> [0][4] && [4] -> [0][2]
+                //In the following configuration also i.e {0, 2} are in a clique because [0] -> [2]... && [2] -> [0]... 
+
+                #region clique building
+                //building 4-cliques, 3-cliques, 2-cliques
+                foreach (var node in nodes)
+                {
+                    if (resolvedNodes.ContainsKey(node.Key)) { continue; }
+
+                    //be sure to only make combinations that contains keys that have NOT been resolved already.
+                    List<int> nonResovledNeighbors = node.Value.neighbors.Keys.Where(k => !resolvedNodes.ContainsKey(k)).ToList();
+
+                    List<List<int>> nodesToCheckForCliques = GetCombinations(nonResovledNeighbors);
+                    nodesToCheckForCliques = nodesToCheckForCliques.OrderByDescending(n => n.Count).ToList();
+
+                    for (int i = 0; i < nodesToCheckForCliques.Count; ++i)
+                    {
+                        //check for neighbors if they are a clique with node
+                        if (nodesAreClique(oneLevelLower, node.Value, nodesToCheckForCliques[i]))
+                        {
+                            //create PCN
+                            List<int> innerNodes = new List<int> { node.Key };
+                            innerNodes.AddRange(nodesToCheckForCliques[i]);
+                            PRAClusterNode c = new PRAClusterNode(currAbslayerID, currentLevel.LastAssignedClusterID, innerNodes);
+                            c.calculateXY(oneLevelLower);
+                            c.setParentToAllInnerNodes(oneLevelLower);
+
+                            //raise ID
+                            currentLevel.LastAssignedClusterID++;
+                            //add clique to abstract layer
+                            currentLevel.AddClusterNode(c);
+
+                            //mark all nodes now contained in the clusernode as resolved
+                            foreach (int n in c.innerNodes)
+                            {
+                                resolvedNodes.Add(n, oneLevelLower.ClusterNodes[n]);
+                            }
+                            //stop checking cliques for node
+                            break;
+                        }
+                    }
+                }
+                #endregion
+
+                //building PCNs for this layer is finished. 
+                //Remove all resovled nodes from nodes. The remaining nodes will be orphans.
+                foreach (var n in resolvedNodes)
+                {
+                    nodes.Remove(n.Key);
+                }
+
+                #region orphans
+                //create orphan PCNs 
+                foreach (var n in nodes)
+                {
+                    PRAClusterNode c = new PRAClusterNode(currAbslayerID, currentLevel.LastAssignedClusterID, new List<int> { n.Key });
+                    c.calculateXY(oneLevelLower);
+                    c.setParentToAllInnerNodes(oneLevelLower);
+
+                    //raise ID
+                    currentLevel.LastAssignedClusterID++;
+                    //add clique to abstract layer
+                    currentLevel.AddClusterNode(c);
+                }
+                #endregion
+
+                structure.Add(currAbslayerID, currentLevel);
+
+                #region PRAClusterNode edge creation
+
+                //add cluster connections
+                foreach (PRAClusterNode c in currentLevel.ClusterNodes.Values)
+                {
+                    List<PRAClusterNode> innerNodesNeighbors = getInnerNodeNeighbors_tmp(c, structure, currAbslayerID);
+                    foreach (PRAClusterNode p in innerNodesNeighbors)
+                    {
+                        //add neighbors (=> create edge)
+                        c.AddNeighbor(p.ID, p);
+                        p.AddNeighbor(c.ID, c);
+                    }
+
+                }
+                #endregion
+
+
+                //if the map has properties such as multiple non-reachable areas that 
+                //are already as abstracted as possible, break the while loop
+                if (currentLevel.AllCLustersDisconnected())
+                {
+                    break;
+                }
+
+                //building PCN connection and, therefore, this abstraction layer.
+                //check if this abstraction layer contains only a single node.
+                //if it does, finish. if it doesn't, raise the currentAbslayerID and loop.
+                if (currentLevel.ClusterNodes.Count == 1)
+                {
+                    break;
+                }
+                else
+                {
+                    currAbslayerID++;
+                }
+            }
+            return structure;
+        }
+        #endregion
+
+        #region tmp innerNeighbors
+        private List<PRAClusterNode> getInnerNodeNeighbors_tmp(PRAClusterNode c, Dictionary<int, PRAbstractionLayer> structure, int layer)
+        {
+            List<PRAClusterNode> res = new List<PRAClusterNode>();
+            foreach (var n in c.innerNodes)
+            {
+                if (layer == 0)
+                {
+                    foreach (var n2 in gMap.Nodes[n].Neighbors.Keys)
+                    {
+                        Node neigh = gMap.Nodes[n2];
+                        if (neigh.IsTraversable() && !c.innerNodes.Contains(n2))
+                        {
+                            //get the PRAClusterParent of this node and add it to the list
+                            int parentID = neigh.PRAClusterParent;
+                            PRAClusterNode p = structure[0].ClusterNodes[parentID];
+                            if (!res.Contains(p))
+                            {
+                                res.Add(p);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    PRAbstractionLayer prev = structure[layer - 1];
+                    foreach (var n2 in prev.ClusterNodes[n].neighbors)
+                    {
+                        //get the PRAClusterParent of this node and add it to the list
+                        int parentID = n2.Value.PRAClusterParent;
+                        PRAClusterNode p = structure[layer].ClusterNodes[parentID];
+                        if (!res.Contains(p))
+                        {
+                            res.Add(p);
+                        }
+                    }
+                }
+            }
+            return res;
+        }
+        #endregion
+
+        #endregion
 
         private void Invalidater_DoWork(object sender, DoWorkEventArgs e)
         {
@@ -1300,10 +1598,7 @@ namespace Bak
 
             printSolution();
             StartAgent();
-
-            //Update();
-            // Invalidate();
-            mainPanel.Update();
+            
         }
 
         private void DisablePathFindingdControls()
@@ -2123,12 +2418,12 @@ namespace Bak
 
         private void printSolution()
         {
-            tb_pathLength.Text = PathfindingSolution.Count+"";
+            ThreadHelperClass.SetText(this, tb_pathLength, PathfindingSolution.Count+"");
 
             if (PathfindingSolution.Count == 0)
             {
-                tb_pathLength.Text = "No solution";
-                l_pathCost.Text = "- - - ";
+                ThreadHelperClass.SetText(this, tb_pathLength, "No solution");
+                ThreadHelperClass.SetText(this, l_pathCost, "- - - ");
                 return;
             }
             
@@ -2136,7 +2431,7 @@ namespace Bak
             {
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
-            l_pathCost.Text = pathCost.ToString();
+            ThreadHelperClass.SetText(this, l_pathCost, pathCost.ToString());
         }
 
         private void backtrackMap(List<int> path, Node current)
@@ -2261,6 +2556,65 @@ namespace Bak
         private void setSearchedBgColor(int currNodeID)
         {
             gMap.Nodes[currNodeID].BackColor = currNodeID != gMap.StartNodeID && currNodeID != gMap.EndNodeID ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[currNodeID].Type];
+        }
+
+        private void cb_mapTests_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cb_mapTests.SelectedIndex == 0)
+            {
+                return;
+            }
+            selectedTest = ((TestCase)cb_mapTests.SelectedItem);
+
+            //      set start/end nodes
+            Node prevStart = gMap.Nodes[gMap.StartNodeID];
+            Node prevEnd = gMap.Nodes[gMap.EndNodeID];
+
+            prevStart.Type = GameMap.NodeType.Traversable;
+            prevEnd.Type = GameMap.NodeType.Traversable;
+            prevStart.BackColor = ColorPalette.NodeColor_Traversable;
+            prevEnd.BackColor = ColorPalette.NodeColor_Traversable;
+
+            gMap.StartNodeID = selectedTest.startPos;
+            gMap.EndNodeID = selectedTest.endPos;
+
+            Node currStart = gMap.Nodes[gMap.StartNodeID];
+            Node currEnd = gMap.Nodes[gMap.EndNodeID];
+            currStart.Type = GameMap.NodeType.StartPosition;
+            currEnd.Type = GameMap.NodeType.EndPosition;
+            currStart.BackColor = ColorPalette.NodeColor_Start;
+            currEnd.BackColor = ColorPalette.NodeColor_End;
+
+            // -------------------------
+
+            mainPanel.Invalidate();
+
+        }
+    }
+
+    public static class ThreadHelperClass
+    {
+        delegate void SetTextCallback(Form f, Control ctrl, string text);
+        /// <summary>
+        /// Set text property of various controls
+        /// </summary>
+        /// <param name="form">The calling form</param>
+        /// <param name="ctrl"></param>
+        /// <param name="text"></param>
+        public static void SetText(Form form, Control ctrl, string text)
+        {
+            // InvokeRequired required compares the thread ID of the 
+            // calling thread to the thread ID of the creating thread. 
+            // If these threads are different, it returns true. 
+            if (ctrl.InvokeRequired)
+            {
+                SetTextCallback d = new SetTextCallback(SetText);
+                form.Invoke(d, new object[] { form, ctrl, text });
+            }
+            else
+            {
+                ctrl.Text = text;
+            }
         }
     }
 }

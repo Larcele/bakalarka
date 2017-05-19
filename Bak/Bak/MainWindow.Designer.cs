@@ -65,10 +65,11 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.panel = new System.Windows.Forms.Panel();
             this.label6 = new System.Windows.Forms.Label();
-            this.chb_cChange = new System.Windows.Forms.CheckBox();
             this.l_pathCost = new System.Windows.Forms.TextBox();
             this.tb_pathLength = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
+            this.cb_mapTests = new System.Windows.Forms.ComboBox();
+            this.label8 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -83,7 +84,7 @@
             this.clustersToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1090, 29);
+            this.menuStrip1.Size = new System.Drawing.Size(1212, 29);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -352,17 +353,17 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label4.Location = new System.Drawing.Point(809, 81);
+            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label4.Location = new System.Drawing.Point(635, 109);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(66, 16);
+            this.label4.Size = new System.Drawing.Size(68, 18);
             this.label4.TabIndex = 15;
             this.label4.Text = "Elapsed";
             // 
             // tb_elapsedTime
             // 
             this.tb_elapsedTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.tb_elapsedTime.Location = new System.Drawing.Point(812, 100);
+            this.tb_elapsedTime.Location = new System.Drawing.Point(638, 130);
             this.tb_elapsedTime.Name = "tb_elapsedTime";
             this.tb_elapsedTime.ReadOnly = true;
             this.tb_elapsedTime.Size = new System.Drawing.Size(128, 26);
@@ -371,7 +372,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(946, 110);
+            this.label5.Location = new System.Drawing.Point(772, 142);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(26, 16);
             this.label5.TabIndex = 17;
@@ -381,7 +382,7 @@
             // 
             this.l_nodeInfo.AutoSize = true;
             this.l_nodeInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.l_nodeInfo.Location = new System.Drawing.Point(667, 32);
+            this.l_nodeInfo.Location = new System.Drawing.Point(635, 32);
             this.l_nodeInfo.Name = "l_nodeInfo";
             this.l_nodeInfo.Size = new System.Drawing.Size(81, 18);
             this.l_nodeInfo.TabIndex = 18;
@@ -390,12 +391,12 @@
             // tb_nodeInfo
             // 
             this.tb_nodeInfo.BackColor = System.Drawing.Color.White;
-            this.tb_nodeInfo.Location = new System.Drawing.Point(670, 57);
+            this.tb_nodeInfo.Location = new System.Drawing.Point(638, 57);
             this.tb_nodeInfo.Multiline = true;
             this.tb_nodeInfo.Name = "tb_nodeInfo";
             this.tb_nodeInfo.ReadOnly = true;
             this.tb_nodeInfo.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.tb_nodeInfo.Size = new System.Drawing.Size(133, 94);
+            this.tb_nodeInfo.Size = new System.Drawing.Size(128, 48);
             this.tb_nodeInfo.TabIndex = 19;
             // 
             // p_editingMapModes
@@ -443,52 +444,63 @@
             this.label6.TabIndex = 20;
             this.label6.Text = "Path cost : ";
             // 
-            // chb_cChange
-            // 
-            this.chb_cChange.AutoSize = true;
-            this.chb_cChange.Location = new System.Drawing.Point(812, 130);
-            this.chb_cChange.Name = "chb_cChange";
-            this.chb_cChange.Size = new System.Drawing.Size(154, 20);
-            this.chb_cChange.TabIndex = 22;
-            this.chb_cChange.Text = "Notify cluster change";
-            this.chb_cChange.UseVisualStyleBackColor = true;
-            // 
             // l_pathCost
             // 
             this.l_pathCost.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
             this.l_pathCost.Location = new System.Drawing.Point(508, 75);
             this.l_pathCost.Name = "l_pathCost";
             this.l_pathCost.ReadOnly = true;
-            this.l_pathCost.Size = new System.Drawing.Size(156, 26);
+            this.l_pathCost.Size = new System.Drawing.Size(119, 26);
             this.l_pathCost.TabIndex = 23;
             // 
             // tb_pathLength
             // 
             this.tb_pathLength.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.tb_pathLength.Location = new System.Drawing.Point(508, 125);
+            this.tb_pathLength.Location = new System.Drawing.Point(508, 130);
             this.tb_pathLength.Name = "tb_pathLength";
             this.tb_pathLength.ReadOnly = true;
-            this.tb_pathLength.Size = new System.Drawing.Size(156, 26);
+            this.tb_pathLength.Size = new System.Drawing.Size(119, 26);
             this.tb_pathLength.TabIndex = 25;
             // 
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(505, 104);
+            this.label7.Location = new System.Drawing.Point(505, 109);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(80, 16);
             this.label7.TabIndex = 24;
             this.label7.Text = "Path length: ";
             // 
+            // cb_mapTests
+            // 
+            this.cb_mapTests.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cb_mapTests.FormattingEnabled = true;
+            this.cb_mapTests.Location = new System.Drawing.Point(777, 57);
+            this.cb_mapTests.Name = "cb_mapTests";
+            this.cb_mapTests.Size = new System.Drawing.Size(145, 24);
+            this.cb_mapTests.TabIndex = 26;
+            this.cb_mapTests.SelectedIndexChanged += new System.EventHandler(this.cb_mapTests_SelectedIndexChanged);
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label8.Location = new System.Drawing.Point(774, 32);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(202, 18);
+            this.label8.TabIndex = 27;
+            this.label8.Text = "Dynamic PRA* Map Tests";
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1090, 741);
+            this.ClientSize = new System.Drawing.Size(1212, 651);
+            this.Controls.Add(this.label8);
+            this.Controls.Add(this.cb_mapTests);
             this.Controls.Add(this.tb_pathLength);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.l_pathCost);
-            this.Controls.Add(this.chb_cChange);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.tb_nodeInfo);
             this.Controls.Add(this.l_nodeInfo);
@@ -556,10 +568,11 @@
         private System.Windows.Forms.Panel panel;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.ToolStripMenuItem x700ToolStripMenuItem;
-        private System.Windows.Forms.CheckBox chb_cChange;
         private System.Windows.Forms.TextBox l_pathCost;
         private System.Windows.Forms.TextBox tb_pathLength;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.ComboBox cb_mapTests;
+        private System.Windows.Forms.Label label8;
     }
 }
 

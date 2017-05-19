@@ -82,7 +82,7 @@ namespace Bak
             }
         }
 
-        private void Node_Click()
+        public void Node_Click()
         {
             if (ParentMap.EditingNodeMode == GameMap.NodeType.EndPosition)
             {

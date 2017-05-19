@@ -8,16 +8,26 @@ namespace Bak
 {
     public class TestCase
     {
-        string mapName;
-        Dictionary<int, GameMap.NodeType> nodeSwaps = new Dictionary<int, GameMap.NodeType>();
-        int startPos;
-        int endPos;
+        public string TestName;
+        public string MapName;
+        public Dictionary<int, GameMap.NodeType> nodeSwaps = new Dictionary<int, GameMap.NodeType>();
+        public int startPos;
+        public int endPos;
 
-        public TestCase(string mapName, int start, int end)
+        public int triggerStep;
+
+        public TestCase(string testname, string mapName, int start, int end, int trigger)
         {
-            this.mapName = mapName;
+            this.TestName = testname;
+            this.MapName = mapName;
             this.startPos = start;
             this.endPos = end;
+            triggerStep = trigger;
+        }
+
+        public override string ToString()
+        {
+            return TestName;
         }
     }
 }
