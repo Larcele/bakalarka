@@ -19,6 +19,7 @@ namespace Bak
         int agentSpeed = 600; //ms
         int counter = 0;
         bool agentTerminate = false;
+        int testPCount = 0;
 
         private Stopwatch stopWatch;
         private Node lastNodeInfo;
@@ -27,6 +28,13 @@ namespace Bak
         private string CurrentMapName = "";
         public PictureBox mainPanel;
 
+        /// <summary>
+        /// the distances of all nodes from the start, from the last PRA* (!) search performed
+        /// </summary>
+        Dictionary<int, float> latestGScore = new Dictionary<int, float>();
+        /// <summary>
+        /// determines whenever a test has already triggered for a TestCase
+        /// </summary>
         bool testShouldRun = false;
         TestCase selectedTest;
         Dictionary<string, List<TestCase>> MapTests = new Dictionary<string, List<TestCase>>();
@@ -1190,6 +1198,7 @@ namespace Bak
         {
             testShouldRun = false;
             pathCost = 0;
+            testPCount = 0;
             PathfindingSolution.Clear();
             searchedNodes.Clear();
 
@@ -1317,7 +1326,6 @@ namespace Bak
             }
 
             int id = PathfindingSolution[agentPosition];
-            
             gMap.Nodes[id].BackColor = ColorPalette.NodeColor_Agent;
 
             if (agentPosition > 0)
@@ -1332,18 +1340,14 @@ namespace Bak
             agent.Change(agentSpeed/2, Timeout.Infinite);
         }
         
-        private void StartAstartOnNew()
+        private void StartPRAstartOnNew()
         {
-            PathfindingSolution.Clear();
-
             pathfinder = new BackgroundWorker();
             pathfinder.WorkerSupportsCancellation = true;
 
             invalidater = new BackgroundWorker();
             invalidater.WorkerSupportsCancellation = true;
-
-            //DisablePathFindingdControls();
-
+            
             pathfinder.DoWork += StartPRAstarSearch;
             pathfinder.RunWorkerCompleted += Pathfinder_RunWorkerCompleted;
             pathfinder.RunWorkerAsync();
@@ -1378,32 +1382,28 @@ namespace Bak
 
             tmpLayers = buildTemporaryPRALayers(tmpLayers);
 
+            //after the computation is over, we replace the old structure with the new one 
             PRAstarHierarchy = tmpLayers;
-            //after the rebuild is complete, STOP THE AGENT
+            //STOP the agent's thread/timer
             agentTerminate = true;
 
             //set a new start point  which is the current agent position
             Node agentPos = gMap.Nodes[PathfindingSolution[agentPosition]];
             gMap.StartNodeID = agentPos.ID;
 
-            //remember the path cost from the start to this point
-            //pathCost = sumPath(PathfindingSolution, agentPosition);
+            //remember the path cost from the start to this point. We should be able to get this from
+            //the latestGScore, since that was updated on the latest PRA* search.
+            pathCost = latestGScore[agentPos.ID];
+            //the path count from start to agent position before the test trigger
+            testPCount = agentPosition;
 
-            //we prevent the test from looping
+            //we prevent the test from looping since it already triggered once
             testShouldRun = false;
 
-            StartAstartOnNew();
+            PathfindingSolution.Clear();
+            StartPRAstartOnNew();
 
         }
-
-        /*private float sumPath(List<int> pathfindingSolution, int agentPosition)
-        {
-            float sum = 0;
-            for (int i = 0; i <= agentPosition; ++i)
-            {
-                sum += 
-            }
-        }*/
 
         #region tmp cluster building
         private Dictionary<int, PRAbstractionLayer> buildTemporaryPRALayers(Dictionary<int, PRAbstractionLayer> structure)
@@ -1639,6 +1639,8 @@ namespace Bak
 
         private void StartPRAstarSearch(object sender, DoWorkEventArgs e)
         {
+            latestGScore.Clear();
+
             //first we check if the start and end node are in the same cluster on the highet level.
             //if they are not, there is no path between them.
             if (ClusterParent(gMap.StartNodeID, PRAstarHierarchy.Count - 1) != ClusterParent(gMap.EndNodeID, PRAstarHierarchy.Count - 1))
@@ -1838,11 +1840,11 @@ namespace Bak
                 currNode = cameFrom[currNode];
 
                 pathCost += gMap.Nodes[currNode].Neighbors[child];
+                latestGScore.Add(currNode, pathCost);
+
                 sol.Add(currNode);
             }
-
             return sol;
-
         }
 
         private List<int> AstarAbstractionSearch(PRAClusterNode start, PRAClusterNode end, PRAbstractionLayer layer, Dictionary<int, PRAClusterNode> nodesToSearch)
@@ -2301,7 +2303,6 @@ namespace Bak
             else
             {
                 List<int> reversedPath = new List<int>();
-
                 reversedPath.Add(currNode);
                 while (cameFrom.ContainsKey(currNode))
                 {
@@ -2309,10 +2310,8 @@ namespace Bak
                     reversedPath.Add(currNode);
                 }
                 pathCost = gScore[gMap.EndNodeID];
-
                 AddToPathfSol(reversedPath);
             }
-
             pathfinder.CancelAsync();
         }
 
@@ -2418,7 +2417,7 @@ namespace Bak
 
         private void printSolution()
         {
-            ThreadHelperClass.SetText(this, tb_pathLength, PathfindingSolution.Count+"");
+            ThreadHelperClass.SetText(this, tb_pathLength, PathfindingSolution.Count + testPCount + "");
 
             if (PathfindingSolution.Count == 0)
             {
@@ -2562,6 +2561,7 @@ namespace Bak
         {
             if (cb_mapTests.SelectedIndex == 0)
             {
+                selectedTest = null;
                 return;
             }
             selectedTest = ((TestCase)cb_mapTests.SelectedItem);

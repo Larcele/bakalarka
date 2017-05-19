@@ -35,7 +35,7 @@ namespace Bak
 
             ///--------------------------------------------------------------------------------
 
-            TestCase t_map07_tun = new TestCase("TunnelDown", "map07.gmap", 1224, 6164, 30);
+            TestCase t_map07_tun = new TestCase("TunnelDown-late", "map07.gmap", 1224, 6164, 33);
             t_map07_tun.nodeSwaps = new Dictionary<int, GameMap.NodeType>()
             {
                 {5363, GameMap.NodeType.Traversable},
@@ -52,6 +52,27 @@ namespace Bak
             else
             {
                 res.Add(t_map07_tun.MapName, new List<TestCase>() { t_map07_tun });
+            }
+
+            ///--------------------------------------------------------------------------------
+
+            TestCase t_map07_tun2 = new TestCase("TunnelDown-OK", "map07.gmap", 1224, 6164, 10);
+            t_map07_tun2.nodeSwaps = new Dictionary<int, GameMap.NodeType>()
+            {
+                { 5363, GameMap.NodeType.Traversable},
+                { 5463, GameMap.NodeType.Traversable},
+                { 5563, GameMap.NodeType.Traversable},
+                { 5663, GameMap.NodeType.Traversable},
+                { 5763, GameMap.NodeType.Traversable},
+                { 5863, GameMap.NodeType.Traversable}
+            };
+            if (res.ContainsKey(t_map07_tun2.MapName))
+            {
+                res[t_map07_tun2.MapName].Add(t_map07_tun2);
+            }
+            else
+            {
+                res.Add(t_map07_tun2.MapName, new List<TestCase>() { t_map07_tun2 });
             }
 
 
