@@ -13,7 +13,7 @@ namespace Bak
         Dictionary<int, Cluster> clusters = new Dictionary<int, Cluster>();
 
         public int ID { get { return id; } }
-        
+        public int LastAssignedClusterID = 0;
         public Dictionary<int, Cluster> Clusters { get { return clusters; } }
 
         public AbstractionLayer(int id, List<Cluster> clusters)
@@ -24,8 +24,21 @@ namespace Bak
             {
                 this.clusters.Add(c.ID, c);
             }
-            
+        }
 
+        private string clusterIDs()
+        {
+            string s = "";
+            foreach (var it in Clusters)
+            {
+                s += it.Key + " ; ";
+            }
+            return s;
+        }
+
+        public override string ToString()
+        {
+            return "HPA Layer: ID=" + ID + "; Clusters: {" + clusterIDs() + "}";
         }
     }
 }

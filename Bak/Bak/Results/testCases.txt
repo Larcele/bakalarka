@@ -16,3 +16,9 @@ MAP:	map07.gmap (Warcraft III custom map 100 x 100)
 START:	1224
 END:	6164
 CHNG:	{ {5363, T}, {5463, T}, {5563, T}, {5663, T}, {5763, T}, {5863, T} }
+
+------------------------
+TEST04
+MAP:	drywatergulch(Warcraft III official map 512 x 512)
+START:	49313
+END:	48194
