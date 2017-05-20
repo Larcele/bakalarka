@@ -14,6 +14,7 @@ namespace Bak
     {
         public int ID { get; private set; }
         public int PRAClusterParent { get; set; }
+        public int HPAClusterParent { get; set; }
         public GameMap.NodeType Type { get; set; }
 
         /// <summary>

@@ -56,6 +56,8 @@ namespace Bak
             }
 
             HierarchicalGraph.Add(layer.ID, layer);
+            
+            BuildClusterConnections(layer);
 
             #region shite
             /*int xDiv = gMap.Width / 2;
@@ -168,7 +170,7 @@ namespace Bak
             List<int> outerNodes = new List<int>();
 
             int startY = rowPos * HPACsize * gMap.Width;
-            int endY = startY == 0 ? HPACsize * gMap.Width : 2 * startY;
+            int endY = startY == 0 ? HPACsize * gMap.Width : 2 * startY;// <- toto je uplna sracka. oprav to
 
             int startX = columnPos;
             int endX = columnPos + HPACsize; //non-inclusive
@@ -179,6 +181,7 @@ namespace Bak
                 {
                     if (gMap.Nodes.ContainsKey(i + j))
                     {
+                        gMap.Nodes[i + j].HPAClusterParent = c.ID;
                         innerNodes.Add(i + j);
                         if (j == startY || i == startX || i == endX - 1 || j + gMap.Width > endY)
                         {
@@ -188,17 +191,59 @@ namespace Bak
 
                 }
             }
-            c.SetInnerNodes(innerNodes);
-            c.SetOuterNodes(outerNodes);
-            layer.Clusters.Add(c.ID, c);
+
+            if (innerNodes.Count != 0 && outerNodes.Count != 0)
+            {
+                c.SetInnerNodes(innerNodes);
+                c.SetOuterNodes(outerNodes);
+                layer.Clusters.Add(c.ID, c);
+            }
+            else
+            {
+                //do not add the cluster to layer; decrease the ID
+                layer.LastAssignedClusterID--;
+            }
         }
 
         private void BuildClusterConnections(AbstractionLayer absl)
         {
             foreach (var cnode in absl.Clusters)
             {
+                if (cnode.Key == 11)
+                {
+                    string s = "";
+                }
+                var neighbors = getHPAClusterNeighbors(cnode.Value);
+                foreach (var n in neighbors)
+                {
+                    cnode.Value.AddNeighbor(n.ID, n);
+                    n.AddNeighbor(cnode.Key, cnode.Value);
+                }
 
             }
+        }
+
+        private List<Cluster> getHPAClusterNeighbors(Cluster c)
+        {
+            List<Cluster> res = new List<Cluster>();
+            foreach (int n in c.OuterNodes)
+            {
+                foreach (var n2 in gMap.Nodes[n].Neighbors.Keys)
+                {
+                    Node neigh = gMap.Nodes[n2];
+                    if (neigh.IsTraversable() && !c.OuterNodes.Contains(n2))
+                    {
+                        //get the HPAClusterParent of this node and add it to the list
+                        int parentID = neigh.HPAClusterParent;
+                        Cluster p = HierarchicalGraph[0].Clusters[parentID];
+                        if (!res.Contains(p))
+                        {
+                            res.Add(p);
+                        }
+                    }
+                }
+            }
+            return res;
         }
 
         #region probably deprecated soon

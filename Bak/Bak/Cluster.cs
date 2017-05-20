@@ -42,5 +42,33 @@ namespace Bak
             OuterNodes.Clear();
             OuterNodes.AddRange(outNodes);
         }
+
+        /// <summary>
+        /// Remembers the Cluster as a Neighbor. If it already is a neighbor, returns and does nothing.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        internal void AddNeighbor(int key, Cluster value)
+        {
+            if (!neighbors.ContainsKey(key) && key != this.ID)
+            {
+                neighbors.Add(key, value);
+            }
+        }
+
+        private string getNeighbors()
+        {
+            string s = "";
+            foreach (var n in neighbors)
+            {
+                s += n.Value.ID + "; ";
+            }
+            return s;
+        }
+
+        public override string ToString()
+        {
+            return "HPACluster ID: " + ID + " Neighbors: {" + getNeighbors() + "} ";
+        }
     }
 }
