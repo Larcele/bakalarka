@@ -978,8 +978,8 @@ namespace Bak
                     Color col = Color.FromArgb(r.Next(0, 256), r.Next(0, 256), r.Next(0, 256));
                     foreach (int nodeID in c.InnerNodes)
                     {
-                        if (gMap.Nodes[nodeID].IsTraversable())
-                        { gMap.Nodes[nodeID].BackColor = col; }
+                       // if (gMap.Nodes[nodeID].IsTraversable())
+                       // { gMap.Nodes[nodeID].BackColor = col; }
                     }
                     foreach (int nodeID in c.OuterNodes)
                     {
