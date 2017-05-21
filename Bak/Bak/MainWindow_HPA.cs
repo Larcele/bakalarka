@@ -59,6 +59,7 @@ namespace Bak
             
             BuildClusterConnections(layer);
             BuildClusterNodes(layer);
+            BuildClusterNodeIntraEdges(layer);
 
             #region shite
             /*int xDiv = gMap.Width / 2;
@@ -161,7 +162,7 @@ namespace Bak
             BuildClusterConnections(absl);*/
             #endregion
         }
-
+        
         public void CreateHPACluster(AbstractionLayer layer, int columnPos, int rowPos)
         {
             Cluster c = new Cluster(layer.LastAssignedClusterID, new List<int>(), new List<int>());
@@ -254,16 +255,19 @@ namespace Bak
                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode);
                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor);
 
-                            cN.Neighbors.Add(neighN.ID, gMap.Nodes[cnode].Neighbors[cnodeNeighbor]);
-                            neighN.Neighbors.Add(cN.ID, gMap.Nodes[cnodeNeighbor].Neighbors[cnode]);
+                            cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode].Neighbors[cnodeNeighbor]);
+                            neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor].Neighbors[cnode]);
 
                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
                             {
                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
                                 {
-                                    //if the clusters don't contain these nodes, then raise ID and add them
+                                    //if the clusters don't contain these nodes, then set cluster parents, 
+                                    //raise ID and add them
                                     c.Value.ClusterNodes.Add(cN.ID, cN);
+                                    cN.ClusterParent = c.Value.ID;
                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
+                                    neighN.ClusterParent = neigh.Value.ID;
 
                                     c.Value.LastAssignedCNodeID++;
                                     neigh.Value.LastAssignedCNodeID++;
@@ -287,16 +291,19 @@ namespace Bak
                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode1);
                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor1);
 
-                            cN.Neighbors.Add(neighN.ID, gMap.Nodes[cnode1].Neighbors[cnodeNeighbor1]);
-                            neighN.Neighbors.Add(cN.ID, gMap.Nodes[cnodeNeighbor1].Neighbors[cnode1]);
+                            cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode1].Neighbors[cnodeNeighbor1]);
+                            neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor1].Neighbors[cnode1]);
 
                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
                             {
                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
                                 {
-                                    //if the clusters don't contain these nodes, then raise ID and add them
+                                    //if the clusters don't contain these nodes, then set cluster parents, 
+                                    //raise ID and add them
                                     c.Value.ClusterNodes.Add(cN.ID, cN);
+                                    cN.ClusterParent = c.Value.ID;
                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
+                                    neighN.ClusterParent = neigh.Value.ID;
 
                                     c.Value.LastAssignedCNodeID++;
                                     neigh.Value.LastAssignedCNodeID++;
@@ -306,16 +313,19 @@ namespace Bak
                             ClusterNode cN2 = new ClusterNode(c.Value.LastAssignedCNodeID, cnode2);
                             ClusterNode neighN2 = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor2);
 
-                            cN2.Neighbors.Add(neighN2.ID, gMap.Nodes[cnode2].Neighbors[cnodeNeighbor2]);
-                            neighN2.Neighbors.Add(cN2.ID, gMap.Nodes[cnodeNeighbor2].Neighbors[cnode2]);
+                            cN2.Neighbors.Add(neighN2.GNodeID, gMap.Nodes[cnode2].Neighbors[cnodeNeighbor2]);
+                            neighN2.Neighbors.Add(cN2.GNodeID, gMap.Nodes[cnodeNeighbor2].Neighbors[cnode2]);
 
                             if (!c.Value.ClusterNodes.ContainsKey(cN2.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN2.ID))
                             {
                                 if (!c.Value.CNodeHasGNodeIdOf(cN2) && !neigh.Value.CNodeHasGNodeIdOf(neighN2))
                                 {
-                                    //if the clusters don't contain these nodes, then raise ID and add them
+                                    //if the clusters don't contain these nodes, then set cluster parents, 
+                                    //raise ID and add them
                                     c.Value.ClusterNodes.Add(cN2.ID, cN2);
+                                    cN2.ClusterParent = c.Value.ID;
                                     neigh.Value.ClusterNodes.Add(neighN2.ID, neighN2);
+                                    neighN2.ClusterParent = neigh.Value.ID;
 
                                     c.Value.LastAssignedCNodeID++;
                                     neigh.Value.LastAssignedCNodeID++;
@@ -328,26 +338,134 @@ namespace Bak
                 }
             }
         }
-
-       /* private List<Tuple<int,int>> getAdjacentClusterPairs(Dictionary<int, int> c1OuterNodesAndNeighbors, List<int> c2OuterNodes)
+        
+        private void BuildClusterNodeIntraEdges(AbstractionLayer layer)
         {
-            //c1OuterNodesAndNeighbors.Keys are the outerNodes of c2OuterNodes we check for intersection
-
-            List<Tuple<int, int>> res = new List<Tuple<int, int>>();
-            if (c1OuterNodeNeighbors.Count > c2OuterNodes.Count)
+            foreach (var c in layer.Clusters.Values)
             {
-                foreach (int neigh in c1OuterNodeNeighbors)
+                foreach (var cn in c.ClusterNodes.Values)
                 {
-
+                    calculateDistInnerClusterNodes(cn, c);
                 }
+            }
+        }
+
+        private void calculateDistInnerClusterNodes(ClusterNode current, Cluster clusterOfNodesTosearch)
+        {
+            foreach (var node in clusterOfNodesTosearch.ClusterNodes.Values)
+            {
+                //the distance was computed already
+                if (current.Neighbors.ContainsKey(node.GNodeID) || current == node) { continue; }
+
+                float cost = AstarDistance(current.GNodeID, node.GNodeID, clusterOfNodesTosearch.InnerNodes);
+                if (cost == 0)
+                {
+                    //there is no path
+                }
+                else
+                {
+                    //now add both the clusterNodes as neighbors the distance
+                    current.Neighbors.Add(node.GNodeID, cost);
+                    node.Neighbors.Add(current.GNodeID, cost);
+                }
+            }
+        }
+
+        private float AstarDistance(int startID, int endID, List<int> nodesToSearch)
+        {
+            float res = 0;
+
+            List<int> closedSet = new List<int>();
+            List<int> openSet = new List<int>();
+
+            //starting node is in the open set
+            openSet.Add(startID);
+
+            // For each node, which node it can most efficiently be reached from.
+            // If a node can be reached from many nodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
+
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                gScore.Add(nodeID, float.MaxValue);
+            }
+            // The cost of going from start to start is zero.
+            gScore[startID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                fScore.Add(nodeID, float.MaxValue);
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[startID] = H_startEnd(startID, endID);
+
+            int currNode = 0; //default value
+            bool pathFound = false;
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i]).FirstOrDefault();
+                if (currNode == endID)
+                {
+                    //break the loop and reconstruct path below
+                    pathFound = true;
+                    break;
+                }
+
+                openSet.Remove(currNode);
+                closedSet.Add(currNode); //"added" to closedList
+
+                foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
+                {
+                    // Ignore the neighbor which is already evaluated or it is non-traversable.
+                    if (!nodesToSearch.Contains(neighbor.Key) || gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet.Contains(neighbor.Key))
+                    { continue; }
+
+                    float tentativeG = gScore[currNode] + neighbor.Value; // The distance from start to a neighbor
+
+                    if (!openSet.Contains(neighbor.Key)) // Discover a new node
+                    {
+                        openSet.Add(neighbor.Key);
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H_startEnd(neighbor.Key, endID);
+                }
+            }
+
+            if (!pathFound)
+            {
+                //No solution
+                res = 0;
             }
             else
             {
-
+                res = gScore[endID];
             }
+            return res;
+        }
 
-        }*/
-
+        private float H_startEnd(int startID, int endID)
+        {
+            return 1 * (Math.Abs(gMap.Nodes[startID].Location.X - gMap.Nodes[endID].Location.X) + Math.Abs(gMap.Nodes[startID].Location.Y - gMap.Nodes[endID].Location.Y));
+        }
+        
         private List<Cluster> getHPAClusterNeighbors(Cluster c)
         {
             List<Cluster> res = new List<Cluster>();

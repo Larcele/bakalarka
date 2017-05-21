@@ -39,7 +39,7 @@ namespace Bak
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
-        string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "GMaps", "map03.gmap");
+        string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "GMaps", "map04.gmap");
 
         GameMap gMap;
         public MainWindow()
