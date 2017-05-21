@@ -12,11 +12,31 @@ namespace Bak
     {
         private void StartHPAstarSearch(object sender, DoWorkEventArgs e)
         {
-            //do partial a* searches in clusters and visualise them
+            List<int> path = new List<int>();
 
-            //concat it all to pathfindingSolution
+            //get the start node cluster
+            int startCID = gMap.Nodes[gMap.StartNodeID].HPAClusterParent;
+            int endCID = gMap.Nodes[gMap.EndNodeID].HPAClusterParent;
+            Cluster startingCluster = HierarchicalGraph[0].Clusters[startCID];
+            Cluster endingCluster = HierarchicalGraph[0].Clusters[endCID];
 
-            StartAstarSearch(null, null);
+            //we create the temporary start clusterNode and calculate the distance between 
+            //it and other cluster nodes
+            ClusterNode tmpStart = new ClusterNode(startingCluster.LastAssignedCNodeID, gMap.StartNodeID);
+            startingCluster.LastAssignedCNodeID++;
+            startingCluster.ClusterNodes.Add(tmpStart.ID, tmpStart);
+            tmpStart.ClusterParent = startCID;
+            calculateDistInnerClusterNodes_Tmp(tmpStart, startingCluster);
+
+            /*ClusterNode tmpEnd = new ClusterNode(endingCluster.LastAssignedCNodeID, gMap.EndNodeID);
+            endingCluster.LastAssignedCNodeID++;
+            tmpEnd.ClusterParent = endCID;
+            calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);*/
+
+            var abstractPath = AstarAbstractHPASearch(tmpStart, endingCluster);
+
+            stopWatch.Stop();
+            
 
         }
 
@@ -350,6 +370,27 @@ namespace Bak
             }
         }
 
+        private void calculateDistInnerClusterNodes_Tmp(ClusterNode current, Cluster clusterOfNodesTosearch)
+        {
+            foreach (var node in clusterOfNodesTosearch.ClusterNodes.Values)
+            {
+                //the distance was computed already
+                if (current.Neighbors.ContainsKey(node.GNodeID) || current == node) { continue; }
+
+                float cost = AstarDistance(current.GNodeID, node.GNodeID, clusterOfNodesTosearch.InnerNodes);
+                if (cost == 0)
+                {
+                    //there is no path
+                }
+                else
+                {
+                    //this is a tmp structure for start/end node conections; We will delete this tmp node
+                    //(current) after the search, so we only give neighbors to current, not the oter way around
+                    current.Neighbors.Add(node.GNodeID, cost);
+                }
+            }
+        }
+
         private void calculateDistInnerClusterNodes(ClusterNode current, Cluster clusterOfNodesTosearch)
         {
             foreach (var node in clusterOfNodesTosearch.ClusterNodes.Values)
@@ -369,6 +410,117 @@ namespace Bak
                     node.Neighbors.Add(current.GNodeID, cost);
                 }
             }
+        }
+
+        private List<int> AstarAbstractHPASearch(ClusterNode start, Cluster end)
+        {
+            List<int> sol = new List<int>();
+            
+            Dictionary<int, bool> closedSet = new Dictionary<int, bool>();
+            foreach (var c in HierarchicalGraph[0].Clusters)
+            {
+                foreach (var cn in c.Value.ClusterNodes.Values)
+                {
+                    closedSet.Add(cn.GNodeID, false);
+                }
+            }
+            Dictionary<int, ClusterNode> openSet = new Dictionary<int, ClusterNode>();
+
+            //starting node is in the open set
+            openSet.Add(gMap.StartNodeID, start);
+
+            // For each clusternode, which clusternode it can most efficiently be reached from.
+            // If a cnode can be reached from many cnodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
+
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (var c in HierarchicalGraph[0].Clusters)
+            {
+                foreach (var cn in c.Value.ClusterNodes.Values)
+                {
+                    gScore.Add(cn.GNodeID, float.MaxValue);
+                }
+            }
+            // The cost of going from start to start is zero.
+            gScore[start.GNodeID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (var c in HierarchicalGraph[0].Clusters)
+            {
+                foreach (var cn in c.Value.ClusterNodes.Values)
+                {
+                    fScore.Add(cn.GNodeID, float.MaxValue);
+                }
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[start.GNodeID] = H_startEnd(start.GNodeID, gMap.EndNodeID);
+
+            int currNode = 0; //default value
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i.Key]).FirstOrDefault().Key;
+                if (end.InnerNodes.Contains(currNode))
+                {
+                    //break the loop and reconstruct path below
+                    //we reached the end cluster. Break and finish the path to the end node below
+                    break;
+                }
+
+                openSet.Remove(currNode);
+                closedSet[currNode] = true; //"added" to closedList
+                
+                int cID = gMap.Nodes[currNode].HPAClusterParent;
+                Cluster c = HierarchicalGraph[0].Clusters[cID];
+                ClusterNode cn = HierarchicalGraph[0].GetCNodeByGID(c, currNode);
+
+                foreach (var neighbor in cn.Neighbors)
+                {
+                    // Ignore the neighbor which is already evaluated.
+                    if (!closedSet.ContainsKey(neighbor.Key) || closedSet[neighbor.Key] == true)
+                    { continue; }
+
+                    // The distance from start to a neighbor
+                    float tentativeG = gScore[currNode] + neighbor.Value;
+                    if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
+                    {
+                        Cluster neighC = HierarchicalGraph[0].Clusters[gMap.Nodes[neighbor.Key].HPAClusterParent];
+                        openSet.Add(neighbor.Key, HierarchicalGraph[0].GetCNodeByGID(neighC, neighbor.Key));
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H_startEnd(neighbor.Key, gMap.EndNodeID);
+                }
+            }
+
+            sol.Add(currNode);
+            while (cameFrom.ContainsKey(currNode))
+            {
+                currNode = cameFrom[currNode];
+                sol.Add(currNode);
+            }
+            //NOT setting pathcost since this is still an abstraction layer
+            //pathCost = gScore[gMap.EndNodeID];
+            // pathfinder.CancelAsync();
+            //invalidater.CancelAsync();
+
+            return sol;
+
+
         }
 
         private float AstarDistance(int startID, int endID, List<int> nodesToSearch)

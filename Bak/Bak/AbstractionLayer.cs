@@ -40,5 +40,11 @@ namespace Bak
         {
             return "HPA Layer: ID=" + ID + "; Clusters: {" + clusterIDs() + "}";
         }
+
+        public ClusterNode GetCNodeByGID(Cluster c, int gNodeID)
+        {
+            var res = c.ClusterNodes.Where(cn => cn.Value.GNodeID == gNodeID).ToList();
+            return res[0].Value;
+        }
     }
 }
