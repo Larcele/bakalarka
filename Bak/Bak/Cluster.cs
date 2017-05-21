@@ -16,6 +16,8 @@ namespace Bak
         public List<int> InnerNodes { get { return innerNodes; } }
         public List<int> OuterNodes { get { return outerNodes; } }
 
+        public int LastAssignedCNodeID = 0;
+
         /// <summary>
         /// neighboring HPAClusters
         /// </summary>
@@ -70,6 +72,18 @@ namespace Bak
                 s += n.Value.ID + "; ";
             }
             return s;
+        }
+
+        public bool CNodeHasGNodeIdOf(ClusterNode c)
+        {
+            foreach (var node in ClusterNodes.Values)
+            {
+                if (node.GNodeID == c.GNodeID)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public override string ToString()

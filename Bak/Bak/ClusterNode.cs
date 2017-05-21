@@ -21,5 +21,10 @@ namespace Bak
             this.clusterID = clusterID;
             this.gNodeID = gNodeID;
         }
+
+        public override string ToString()
+        {
+            return "CNode; gNodeID: " + gNodeID + " ; clusterID: " + clusterID;
+        }
     }
 }
