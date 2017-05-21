@@ -15,9 +15,15 @@ namespace Bak
         public int ID { get { return id; } }
         public List<int> InnerNodes { get { return innerNodes; } }
         public List<int> OuterNodes { get { return outerNodes; } }
-        public Dictionary<int, Cluster> neighbors = new Dictionary<int, Cluster>(); //neighboring HPAClusters
-        public Dictionary<int, float> outerNodesDist = new Dictionary<int, float>(); //the distances between outer nodes, pre-computed by A*
-        public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
+
+        /// <summary>
+        /// neighboring HPAClusters
+        /// </summary>
+        public Dictionary<int, Cluster> Neighbors = new Dictionary<int, Cluster>();
+        /// <summary>
+        /// the distances between cluster nodes, pre-computed by A*
+        /// </summary>
+        public Dictionary<int, float> ClusterNodesDist = new Dictionary<int, float>(); public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
         
         public Cluster(int id)
         {
@@ -50,16 +56,16 @@ namespace Bak
         /// <param name="value"></param>
         internal void AddNeighbor(int key, Cluster value)
         {
-            if (!neighbors.ContainsKey(key) && key != this.ID)
+            if (!Neighbors.ContainsKey(key) && key != this.ID)
             {
-                neighbors.Add(key, value);
+                Neighbors.Add(key, value);
             }
         }
 
         private string getNeighbors()
         {
             string s = "";
-            foreach (var n in neighbors)
+            foreach (var n in Neighbors)
             {
                 s += n.Value.ID + "; ";
             }

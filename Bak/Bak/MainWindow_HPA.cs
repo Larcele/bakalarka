@@ -58,6 +58,7 @@ namespace Bak
             HierarchicalGraph.Add(layer.ID, layer);
             
             BuildClusterConnections(layer);
+            BuildClusterNodes(layer);
 
             #region shite
             /*int xDiv = gMap.Width / 2;
@@ -170,7 +171,7 @@ namespace Bak
             List<int> outerNodes = new List<int>();
 
             int startY = rowPos * HPACsize * gMap.Width;
-            int endY = startY == 0 ? HPACsize * gMap.Width : 2 * startY;// <- toto je uplna sracka. oprav to
+            int endY = startY == 0 ? HPACsize * gMap.Width : startY + gMap.Width * 10;// <- toto je uplna sracka. oprav to
 
             int startX = columnPos;
             int endX = columnPos + HPACsize; //non-inclusive
@@ -205,14 +206,10 @@ namespace Bak
             }
         }
 
-        private void BuildClusterConnections(AbstractionLayer absl)
+        private void BuildClusterConnections(AbstractionLayer layer)
         {
-            foreach (var cnode in absl.Clusters)
+            foreach (var cnode in layer.Clusters)
             {
-                if (cnode.Key == 11)
-                {
-                    string s = "";
-                }
                 var neighbors = getHPAClusterNeighbors(cnode.Value);
                 foreach (var n in neighbors)
                 {
@@ -220,6 +217,28 @@ namespace Bak
                     n.AddNeighbor(cnode.Key, cnode.Value);
                 }
 
+            }
+        }
+
+        private void BuildClusterNodes(AbstractionLayer layer)
+        {
+            foreach (var c in layer.Clusters)
+            {
+                foreach (var neigh in c.Value.Neighbors)
+                {
+                   /* //make an intersection of their outerNodes;
+                    var res = c.Value.OuterNodes.Intersect(neigh.Value.OuterNodes);
+                    //if the intersection is less than 4 we create a single connection.
+                    if (res.Count() <= 4)
+                    {
+
+                    }
+                    else
+                    {
+                        //the max number of 
+                    }*/
+
+                }
             }
         }
 
