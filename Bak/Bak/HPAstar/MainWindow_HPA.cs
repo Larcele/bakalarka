@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,24 +26,56 @@ namespace Bak
             //it and other cluster nodes
             ClusterNode tmpStart = new ClusterNode(gMap.StartNodeID);
             startingCluster.ClusterNodes.Add(tmpStart.GNodeID, tmpStart);
+            HierarchicalGraph[0].AbstractNodes.Add(tmpStart.GNodeID, tmpStart);
             tmpStart.ClusterParent = startCID;
             calculateDistInnerClusterNodes_Tmp(tmpStart, startingCluster);
 
             ClusterNode tmpEnd = new ClusterNode(gMap.EndNodeID);
             endingCluster.ClusterNodes.Add(tmpEnd.GNodeID, tmpEnd);
+            HierarchicalGraph[0].AbstractNodes.Add(tmpEnd.GNodeID, tmpEnd);
             tmpEnd.ClusterParent = endCID;
             calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);
 
             var abstractPath = AstarAbstractHPASearch(tmpStart, endingCluster);
+            
+            //goes through the low-level clusters and partially builds a path on the grid base.
+            //abstractPath contains the indices of low-level clusters. Therefore,
+            //by doing HierarchicalAbstraction[0].ClusterNodes[i] we get the cluster we need
+            int startID = gMap.StartNodeID;
+            for (int i = abstractPath.Count - 1; i > 0; --i)
+            {
+                List<int> partialPath = new List<int>();
+
+                partialPath = AstarHPALowestLevelSearch(HierarchicalGraph[0].AbstractNodes[abstractPath[i]],
+                                                     HierarchicalGraph[0].AbstractNodes[abstractPath[i - 1]],
+                                                     startID);
+
+                AddToPathfSol(partialPath);
+
+                if (i == abstractPath.Count - 1)
+                {
+                    StartAgent();
+                }
+
+                //the next start node is going to be the end node of this search. 
+                //since A* path returned is reversed, the first element was the last (end) node.
+                startID = partialPath[0];
+            }
+
             startingCluster.ClusterNodes.Remove(tmpStart.GNodeID);
             endingCluster.ClusterNodes.Remove(tmpEnd.GNodeID);
+            HierarchicalGraph[0].AbstractNodes.Remove(tmpEnd.GNodeID);
+            HierarchicalGraph[0].AbstractNodes.Remove(tmpStart.GNodeID);
 
-            stopWatch.Stop();
+            pfStopWatch.Stop();
         }
 
         private void BuildHPAClusters()
         {
             HierarchicalGraph.Clear();
+
+            hpaWatch = new Stopwatch();
+            hpaWatch.Start();
 
             AbstractionLayer layer = new AbstractionLayer(0, new List<Cluster>());
 
@@ -65,7 +98,7 @@ namespace Bak
             {
                 int i = 0;
                 int j = 0;
-                HPACsize = gMap.Width / 2;
+                HPACsize = (gMap.Width % 2 == 0 ? gMap.Width / 2 : gMap.Width / 2 + 1);
 
                 for (j = 0; j <= gMap.Height / HPACsize; ++j)
                 {
@@ -81,6 +114,8 @@ namespace Bak
             BuildClusterConnections(layer);
             BuildClusterNodes(layer);
             BuildClusterNodeIntraEdges(layer);
+
+            hpaWatch.Stop();
         }
         
         public void CreateHPACluster(AbstractionLayer layer, int columnPos, int rowPos)
@@ -98,7 +133,7 @@ namespace Bak
             };
 
             int startY = rowPos * HPACsize * gMap.Width;
-            int endY = startY == 0 ? HPACsize * gMap.Width : startY + gMap.Width * 10;
+            int endY = startY == 0 ? HPACsize * gMap.Width : startY + gMap.Width * HPACsize;
 
             int startX = columnPos;
             int endX = columnPos + HPACsize; //non-inclusive
@@ -414,6 +449,7 @@ namespace Bak
 
         private List<int> AstarAbstractHPASearch(ClusterNode start, Cluster end)
         {
+            bool lastCluster = false;
             List<int> sol = new List<int>();
             
             Dictionary<int, bool> closedSet = new Dictionary<int, bool>();
@@ -472,6 +508,7 @@ namespace Bak
                 {
                     //break the loop and reconstruct path below
                     //we reached the end cluster. Break and finish the path to the end node below
+                    lastCluster = true;
                     break;
                 }
 
@@ -480,7 +517,7 @@ namespace Bak
                 
                 int cID = gMap.Nodes[currNode].HPAClusterParent;
                 Cluster c = HierarchicalGraph[0].Clusters[cID];
-                ClusterNode cn = HierarchicalGraph[0].GetCNodeByGID(c, currNode);
+                ClusterNode cn = HierarchicalGraph[0].AbstractNodes[currNode];
 
                 foreach (var neighbor in cn.Neighbors)
                 {
@@ -493,7 +530,7 @@ namespace Bak
                     if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
                     {
                         Cluster neighC = HierarchicalGraph[0].Clusters[gMap.Nodes[neighbor.Key].HPAClusterParent];
-                        openSet.Add(neighbor.Key, HierarchicalGraph[0].GetCNodeByGID(neighC, neighbor.Key));
+                        openSet.Add(neighbor.Key, HierarchicalGraph[0].AbstractNodes[neighbor.Key]);
                     }
                     else if (tentativeG >= gScore[neighbor.Key])
                     {
@@ -505,6 +542,10 @@ namespace Bak
                     gScore[neighbor.Key] = tentativeG;
                     fScore[neighbor.Key] = gScore[neighbor.Key] + H_startEnd(neighbor.Key, gMap.EndNodeID);
                 }
+            }
+            if (lastCluster)
+            {
+                sol.Add(gMap.EndNodeID);
             }
 
             sol.Add(currNode);
@@ -519,8 +560,131 @@ namespace Bak
             //invalidater.CancelAsync();
 
             return sol;
+        }
 
+        /// <summary>
+        /// This runs A* assuming that both start and nextDestination 
+        /// clusters are clusters belonging to the lowest level of the HPA* abstraction.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="nextDestination"></param>
+        /// <returns></returns>
+        private List<int> AstarHPALowestLevelSearch(ClusterNode start, ClusterNode nextDestination, int startPosition)
+        {
+            Cluster startC = clusterOfClusterNode(start);
+            Cluster nextC = clusterOfClusterNode(nextDestination);
+            
+            HashSet<int> nodesToSearch = new HashSet<int>();
+            foreach (int id in startC.InnerNodes)
+            {
+                if (gMap.Nodes[id].IsTraversable())
+                {
+                    nodesToSearch.Add(id);
+                }
+            }
+            foreach (int id in nextC.InnerNodes)
+            {
+                if (gMap.Nodes[id].IsTraversable())
+                {
+                    nodesToSearch.Add(id);
+                }
+            }
+            List<int> sol = new List<int>();
 
+            Dictionary<int, bool> closedSet = new Dictionary<int, bool>();
+            foreach (int id in nodesToSearch)
+            {
+                closedSet.Add(id, false);
+            }
+            Dictionary<int, Node> openSet = new Dictionary<int, Node>();
+
+            //starting node is in the open set
+            openSet.Add(startPosition, gMap.Nodes[startPosition]);
+
+            // For each clusternode, which clusternode it can most efficiently be reached from.
+            // If a cnode can be reached from many cnodes, cameFrom will eventually contain the
+            // most efficient previous step.
+            Dictionary<int, int> cameFrom = new Dictionary<int, int>();
+
+            // For each node, the cost of getting from the start node to that node.
+            Dictionary<int, float> gScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                gScore.Add(nodeID, float.MaxValue);
+            }
+            // The cost of going from start to start is zero.
+            gScore[start.GNodeID] = 0;
+
+            // For each node, the total cost of getting from the start node to the goal
+            // by passing by that node. That value is partly known, partly heuristic.
+            Dictionary<int, float> fScore = new Dictionary<int, float>();
+            //default values are infinity
+            foreach (int nodeID in nodesToSearch)
+            {
+                fScore.Add(nodeID, float.MaxValue);
+            }
+
+            // For the first node, that value is completely heuristic.
+            fScore[startPosition] = H_lowHPA(startPosition, nextDestination);
+
+            int currNode = 0; //default value
+
+            while (openSet.Count != 0)
+            {
+                //the node in openSet having the lowest fScore value
+                currNode = openSet.OrderBy(i => fScore[i.Key]).FirstOrDefault().Key;
+                if (currNode == nextDestination.GNodeID)
+                {
+                    //break the loop and reconstruct path below
+                    break;
+                }
+
+                openSet.Remove(currNode);
+                closedSet[currNode] = true; //"added" to closedList
+
+                foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
+                {
+                    // Ignore the neighbor which is already evaluated or a neighbor 
+                    //that doesn't belong to neither start nor nextDestination cluster.
+                    if ((!startC.InnerNodes.Contains(neighbor.Key) && !nextC.InnerNodes.Contains(neighbor.Key))
+                        || (!closedSet.ContainsKey(neighbor.Key) || closedSet[neighbor.Key] == true))
+                    { continue; }
+
+                    // The distance from start to a neighbor
+                    float tentativeG = gScore[currNode] + neighbor.Value;
+                    if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
+                    {
+                        searchedNodes.Add(neighbor.Key);
+                        expandedNodesCount++;
+                        setSearchedBgColor(neighbor.Key);
+                        openSet.Add(neighbor.Key, gMap.Nodes[neighbor.Key]);
+                    }
+                    else if (tentativeG >= gScore[neighbor.Key])
+                    {
+                        continue; //not a better path
+                    }
+
+                    // This path is the best until now. Record it!
+                    cameFrom[neighbor.Key] = currNode;
+                    gScore[neighbor.Key] = tentativeG;
+                    fScore[neighbor.Key] = gScore[neighbor.Key] + H_lowHPA(neighbor.Key, nextDestination);
+                }
+            }
+
+            sol.Add(currNode);
+            while (cameFrom.ContainsKey(currNode))
+            {
+                int child = currNode;
+                currNode = cameFrom[currNode];
+
+                pathCost += gMap.Nodes[currNode].Neighbors[child];
+
+                sol.Add(currNode);
+            }
+            // pathfinder.CancelAsync();
+
+            return sol;
         }
 
         private float AstarDistance(int startID, int endID, HashSet<int> nodesToSearch)
@@ -616,6 +780,35 @@ namespace Bak
         private float H_startEnd(int startID, int endID)
         {
             return 1 * (Math.Abs(gMap.Nodes[startID].Location.X/30 - gMap.Nodes[endID].Location.X/30) + Math.Abs(gMap.Nodes[startID].Location.Y/30 - gMap.Nodes[endID].Location.Y/30));
+        }
+
+        /// <summary>
+        /// Calculates the distance from a low-level node to an estimated next cluster
+        /// </summary>
+        /// <param name="n"></param>
+        /// <param name="end"></param>
+        /// <returns></returns>
+        private float H_lowHPA(int n, ClusterNode end)
+        {
+            switch (heuristic)
+            {
+                case Heuristic.Manhattan:
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X / 30 - gMap.Nodes[end.GNodeID].Location.X / 30) + Math.Abs(gMap.Nodes[n].Location.Y / 30 - gMap.Nodes[end.GNodeID].Location.Y / 30));
+
+                case Heuristic.DiagonalShortcut:
+                    float h = 0;
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X / 30 - gMap.Nodes[end.GNodeID].Location.X / 30);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y / 30 - gMap.Nodes[end.GNodeID].Location.Y / 30);
+                    if (dx > dy)
+                        h = 1.4f * dy + 1 * (dx - dy);
+                    else
+                        h = 1.4f * dx + 1 * (dy - dx);
+                    return h;
+
+                default:
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[end.GNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[end.GNodeID].Location.Y));
+
+            }
         }
 
         private void createClusterNodes(Cluster c, Cluster neighbor, Tuple<int, int> entrance)
@@ -828,6 +1021,11 @@ namespace Bak
                 }
             }
             return res;
+        }
+
+        private Cluster clusterOfClusterNode(ClusterNode c)
+        {
+            return HierarchicalGraph[0].Clusters[gMap.Nodes[c.GNodeID].HPAClusterParent];
         }
     }
 }

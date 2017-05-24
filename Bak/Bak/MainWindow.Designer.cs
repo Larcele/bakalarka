@@ -64,6 +64,14 @@
             this.label8 = new System.Windows.Forms.Label();
             this.tb_expandedN = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.tb_praTime = new System.Windows.Forms.TextBox();
+            this.label11 = new System.Windows.Forms.Label();
+            this.tb_hpaTime = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.label15 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.p_editingMapModes.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -78,7 +86,7 @@
             this.clustersToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1212, 30);
+            this.menuStrip1.Size = new System.Drawing.Size(1212, 29);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -88,7 +96,7 @@
             this.loadMapToolStripMenuItem,
             this.saveMapToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 26);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 25);
             this.fileToolStripMenuItem.Text = "File";
             // 
             // loadMapToolStripMenuItem
@@ -110,7 +118,7 @@
             this.clustersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showHPAClustersToolStripMenuItem});
             this.clustersToolStripMenuItem.Name = "clustersToolStripMenuItem";
-            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 26);
+            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 25);
             this.clustersToolStripMenuItem.Text = "Clusters";
             // 
             // showHPAClustersToolStripMenuItem
@@ -172,7 +180,7 @@
             // 
             this.l_mapEditing.AutoSize = true;
             this.l_mapEditing.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.l_mapEditing.Location = new System.Drawing.Point(3, 7);
+            this.l_mapEditing.Location = new System.Drawing.Point(3, 3);
             this.l_mapEditing.Name = "l_mapEditing";
             this.l_mapEditing.Size = new System.Drawing.Size(152, 18);
             this.l_mapEditing.TabIndex = 0;
@@ -212,7 +220,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label1.Location = new System.Drawing.Point(12, 39);
+            this.label1.Location = new System.Drawing.Point(12, 34);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(103, 20);
             this.label1.TabIndex = 7;
@@ -398,7 +406,7 @@
             // 
             this.cb_mapTests.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cb_mapTests.FormattingEnabled = true;
-            this.cb_mapTests.Location = new System.Drawing.Point(782, 57);
+            this.cb_mapTests.Location = new System.Drawing.Point(782, 75);
             this.cb_mapTests.Name = "cb_mapTests";
             this.cb_mapTests.Size = new System.Drawing.Size(118, 24);
             this.cb_mapTests.TabIndex = 26;
@@ -408,11 +416,11 @@
             // 
             this.label8.AutoSize = true;
             this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label8.Location = new System.Drawing.Point(779, 29);
+            this.label8.Location = new System.Drawing.Point(779, 32);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(202, 18);
+            this.label8.Size = new System.Drawing.Size(123, 18);
             this.label8.TabIndex = 27;
-            this.label8.Text = "Dynamic PRA* Map Tests";
+            this.label8.Text = "Dynamic PRA* ";
             // 
             // tb_expandedN
             // 
@@ -432,11 +440,95 @@
             this.label9.TabIndex = 29;
             this.label9.Text = "Nodes expanded:";
             // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label10.Location = new System.Drawing.Point(932, 109);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(41, 16);
+            this.label10.TabIndex = 31;
+            this.label10.Text = "PRA*";
+            // 
+            // tb_praTime
+            // 
+            this.tb_praTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.tb_praTime.Location = new System.Drawing.Point(935, 130);
+            this.tb_praTime.Name = "tb_praTime";
+            this.tb_praTime.ReadOnly = true;
+            this.tb_praTime.Size = new System.Drawing.Size(118, 26);
+            this.tb_praTime.TabIndex = 30;
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label11.Location = new System.Drawing.Point(932, 36);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(179, 18);
+            this.label11.TabIndex = 33;
+            this.label11.Text = "Abstraction build times";
+            // 
+            // tb_hpaTime
+            // 
+            this.tb_hpaTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.tb_hpaTime.Location = new System.Drawing.Point(935, 78);
+            this.tb_hpaTime.Name = "tb_hpaTime";
+            this.tb_hpaTime.ReadOnly = true;
+            this.tb_hpaTime.Size = new System.Drawing.Size(118, 26);
+            this.tb_hpaTime.TabIndex = 32;
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(1059, 88);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(26, 16);
+            this.label12.TabIndex = 34;
+            this.label12.Text = "ms";
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(1059, 138);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(26, 16);
+            this.label13.TabIndex = 35;
+            this.label13.Text = "ms";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label14.Location = new System.Drawing.Point(779, 50);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(87, 18);
+            this.label14.TabIndex = 36;
+            this.label14.Text = "Map Tests";
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label15.Location = new System.Drawing.Point(932, 61);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(41, 16);
+            this.label15.TabIndex = 37;
+            this.label15.Text = "HPA*";
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1212, 651);
+            this.Controls.Add(this.label15);
+            this.Controls.Add(this.label14);
+            this.Controls.Add(this.label13);
+            this.Controls.Add(this.label12);
+            this.Controls.Add(this.label11);
+            this.Controls.Add(this.tb_hpaTime);
+            this.Controls.Add(this.label10);
+            this.Controls.Add(this.tb_praTime);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.tb_expandedN);
             this.Controls.Add(this.label8);
@@ -510,6 +602,14 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.TextBox tb_expandedN;
         private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.TextBox tb_praTime;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.TextBox tb_hpaTime;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Label label15;
     }
 }
 

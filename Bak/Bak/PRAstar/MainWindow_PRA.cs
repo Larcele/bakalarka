@@ -26,6 +26,9 @@ namespace Bak
 
         private void BuildPRAbstractMap()
         {
+            praWatch = new System.Diagnostics.Stopwatch();
+            praWatch.Start();
+            
             int currentAbslayerID = 0;
             PRAbstractionLayer absl = new PRAbstractionLayer(currentAbslayerID);
 
@@ -159,10 +162,10 @@ namespace Bak
 
             //build additional layers until a single abstract node is left for each non-disconnected map space
             buildPRALayers();
+
+            praWatch.Stop();
         }
-
-
-
+        
         private void StartPRAstarSearch(object sender, DoWorkEventArgs e)
         {
             latestGScore.Clear();
@@ -203,7 +206,7 @@ namespace Bak
             {
                 List<int> partialPath = new List<int>();
 
-                partialPath = AstarLowestLevelSearch(PRAstarHierarchy[0].ClusterNodes[abstractPath[i]],
+                partialPath = AstarPRALowestLevelSearch(PRAstarHierarchy[0].ClusterNodes[abstractPath[i]],
                                                      PRAstarHierarchy[0].ClusterNodes[abstractPath[i - 1]],
                                                      startID);
 
@@ -218,7 +221,7 @@ namespace Bak
                 //since A* path returned is reversed, the first element was the last (end) node.
                 startID = partialPath[0];
             }
-            stopWatch.Stop();
+            pfStopWatch.Stop();
 
             pathfinder.CancelAsync();
 
@@ -244,7 +247,7 @@ namespace Bak
         /// <param name="start"></param>
         /// <param name="nextDestination"></param>
         /// <returns></returns>
-        private List<int> AstarLowestLevelSearch(PRAClusterNode start, PRAClusterNode nextDestination, int startPosition)
+        private List<int> AstarPRALowestLevelSearch(PRAClusterNode start, PRAClusterNode nextDestination, int startPosition)
         {
             bool isFinalCluster = false;
             if (nextDestination.innerNodes.Contains(gMap.EndNodeID))
@@ -1072,8 +1075,8 @@ namespace Bak
         {
             EnablePathFindingdControls();
 
-            stopWatch.Stop();
-            ThreadHelperClass.SetText(this, tb_elapsedTime, stopWatch.Elapsed.TotalMilliseconds.ToString());
+            pfStopWatch.Stop();
+            ThreadHelperClass.SetText(this, tb_elapsedTime, pfStopWatch.Elapsed.TotalMilliseconds.ToString());
 
             printSolution();
             StartAgent();
@@ -1133,12 +1136,12 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 1 * (Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30) + Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30));
+                    return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
 
                 case Heuristic.DiagonalShortcut:
                     float h = 0;
-                    int dx = Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30);
-                    int dy = Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30);
+                    int dx = Math.Abs(layer.ClusterNodes[n].X - end.X);
+                    int dy = Math.Abs(layer.ClusterNodes[n].Y - end.Y);
                     if (dx > dy)
                         h = 1.4f * dy + 1 * (dx - dy);
                     else

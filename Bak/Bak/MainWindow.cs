@@ -21,7 +21,9 @@ namespace Bak
         bool agentTerminate = false;
         int testPCount = 0;
 
-        private Stopwatch stopWatch;
+        private Stopwatch pfStopWatch;
+        private Stopwatch praWatch;
+        private Stopwatch hpaWatch;
         private Node lastNodeInfo;
         private float pathCost = 0;
         private Heuristic heuristic;
@@ -71,7 +73,6 @@ namespace Bak
             
             mainPanel.Paint += MainPanel_Paint;
             mainPanel.MouseDown += MainPanel_Click;
-
             
             gMap = new GridMap(this, 5, 5, FilePath);
             SetMapSize();
@@ -82,6 +83,9 @@ namespace Bak
 
             BuildHPAClusters();
             BuildPRAbstractMap();
+
+            tb_hpaTime.Text = hpaWatch.Elapsed.TotalMilliseconds.ToString();
+            tb_praTime.Text = praWatch.Elapsed.TotalMilliseconds.ToString();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -282,6 +286,9 @@ namespace Bak
 
             BuildHPAClusters();
             BuildPRAbstractMap();
+
+            tb_hpaTime.Text = hpaWatch.Elapsed.TotalMilliseconds.ToString();
+            tb_praTime.Text = praWatch.Elapsed.TotalMilliseconds.ToString();
         }
         
         static List<List<int>> GetCombinations(List<int> list)
@@ -466,8 +473,8 @@ namespace Bak
 
             DisablePathFindingdControls();
 
-            stopWatch = new Stopwatch();
-            stopWatch.Start();
+            pfStopWatch = new Stopwatch();
+            pfStopWatch.Start();
             switch (pathfinding)
             {
                 case "PRA* (Manhattan heuristic)":
@@ -587,6 +594,7 @@ namespace Bak
                 if (invalidater.CancellationPending) { break; }
 
                 mainPanel.Invalidate();
+                System.Threading.Thread.Sleep(agentSpeed/2);
             }
         }
 
@@ -594,8 +602,8 @@ namespace Bak
         {
             EnablePathFindingdControls();
 
-            stopWatch.Stop();
-            tb_elapsedTime.Text = stopWatch.Elapsed.TotalMilliseconds.ToString();
+            pfStopWatch.Stop();
+            tb_elapsedTime.Text = pfStopWatch.Elapsed.TotalMilliseconds.ToString();
 
             printSolution();
             StartAgent();
@@ -716,7 +724,7 @@ namespace Bak
             AddToPathfSol(reversedPath);
 
             pathCost = shortestDist[gMap.EndNodeID].PathCost;
-            stopWatch.Stop();
+            pfStopWatch.Stop();
 
             pathfinder.CancelAsync();
         }
@@ -836,7 +844,7 @@ namespace Bak
                 AddToPathfSol(reversedPath);
             }
 
-            stopWatch.Stop();
+            pfStopWatch.Stop();
             pathfinder.CancelAsync();
         }
 

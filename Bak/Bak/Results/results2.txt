@@ -1,0 +1,17 @@
+drywatergulch
+start: 63025
+end: 58928
+
+HPA* : 133 path cost; 122 path length; 53,2247 ms; 1051 nodes expanded
+PRA* : 136,8 path cost; 121 path length; 12,8122 ms; 502 nodes expanded
+A* manhattan: 124,6 path cost; 114 path length; 511,5588 ms;  8111 nodes expanded
+A* manhattan: 124,6 path cost; 114 path length; 593,2125 ms;  9524 nodes expanded
+
+brc503d
+start: 320
+end: 81917
+A* diagonal : 466,399 pc; 399 pl; 5038,5642 ms; 53950 expanded; 
+A* manhattan : 466,399 pc; 399 pl; 5102,6073 ms; 51704 expanded; 
+HPA* : 478,9992 pc; 420 pl; 220,5746 ms; 3654 expanded;
+PRA* diagonal: 518,3994 pc; 449 pl; 17,6796 ms; 1992 expanded;
+PRA* manhattan: 518,3994 pc; 449 pl; 14,6796 ms; 1992 expanded;
