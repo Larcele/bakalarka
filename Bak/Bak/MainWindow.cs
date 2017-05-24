@@ -995,7 +995,7 @@ namespace Bak
                             gMap.Nodes[nodeID].BackColor = Color.White;
                         }
                     }
-                    foreach (var cNode in c.ClusterNodes.Values)
+                    foreach (var cNode in a.AbstractNodes.Values)
                     {
                         gMap.Nodes[cNode.GNodeID].BackColor = Color.Red;
                         gMap.Nodes[cNode.GNodeID].BackColor = Color.Red;

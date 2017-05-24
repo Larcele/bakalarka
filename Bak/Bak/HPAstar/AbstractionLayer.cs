@@ -16,6 +16,8 @@ namespace Bak
         public int LastAssignedClusterID = 0;
         public Dictionary<int, Cluster> Clusters { get { return clusters; } }
 
+        public Dictionary<int, ClusterNode> AbstractNodes = new Dictionary<int, ClusterNode>();
+
         public AbstractionLayer(int id, List<Cluster> clusters)
         {
             this.id = id;

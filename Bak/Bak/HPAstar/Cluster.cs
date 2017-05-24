@@ -15,9 +15,6 @@ namespace Bak
         public int ID { get { return id; } }
         public HashSet<int> InnerNodes { get { return innerNodes; } }
         public Dictionary<char, OuterNodeArea> OuterNodes = new Dictionary<char, OuterNodeArea>();
-        //public HashSet<int> OuterNodes { get { return outerNodes; } }
-
-        public int LastAssignedCNodeID = 0;
 
         /// <summary>
         /// neighboring HPAClusters
@@ -28,8 +25,9 @@ namespace Bak
         /// <summary>
         /// the distances between cluster nodes, pre-computed by A*
         /// </summary>
-        public Dictionary<int, float> ClusterNodesDist = new Dictionary<int, float>(); public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
-        
+        public Dictionary<int, float> ClusterNodesDist = new Dictionary<int, float>();
+        public Dictionary<int, ClusterNode> ClusterNodes = new Dictionary<int, ClusterNode>();
+
         public Cluster(int id)
         {
             this.id = id;
@@ -39,7 +37,7 @@ namespace Bak
             OuterNodes.Add('L', new OuterNodeArea());
             OuterNodes.Add('R', new OuterNodeArea());
         }
-        
+
         public void SetInnerNodes(HashSet<int> inNodes)
         {
             InnerNodes.Clear();
@@ -87,6 +85,18 @@ namespace Bak
                 s += n.Value.ID + "; ";
             }
             return s;
+        }
+
+        public Cluster GetNeighbor(char dir)
+        {
+            try
+            {
+                return this.DirectioNeighbor[dir];
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
         }
 
         public bool CNodeHasGNodeIdOf(ClusterNode c)

@@ -23,22 +23,21 @@ namespace Bak
 
             //we create the temporary start clusterNode and calculate the distance between 
             //it and other cluster nodes
-            ClusterNode tmpStart = new ClusterNode(startingCluster.LastAssignedCNodeID, gMap.StartNodeID);
-            startingCluster.LastAssignedCNodeID++;
-            startingCluster.ClusterNodes.Add(tmpStart.ID, tmpStart);
+            ClusterNode tmpStart = new ClusterNode(gMap.StartNodeID);
+            startingCluster.ClusterNodes.Add(tmpStart.GNodeID, tmpStart);
             tmpStart.ClusterParent = startCID;
             calculateDistInnerClusterNodes_Tmp(tmpStart, startingCluster);
 
-            /*ClusterNode tmpEnd = new ClusterNode(endingCluster.LastAssignedCNodeID, gMap.EndNodeID);
-            endingCluster.LastAssignedCNodeID++;
+            ClusterNode tmpEnd = new ClusterNode(gMap.EndNodeID);
+            endingCluster.ClusterNodes.Add(tmpEnd.GNodeID, tmpEnd);
             tmpEnd.ClusterParent = endCID;
-            calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);*/
+            calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);
 
             var abstractPath = AstarAbstractHPASearch(tmpStart, endingCluster);
+            startingCluster.ClusterNodes.Remove(tmpStart.GNodeID);
+            endingCluster.ClusterNodes.Remove(tmpEnd.GNodeID);
 
             stopWatch.Stop();
-            
-
         }
 
         private void BuildHPAClusters()
@@ -275,28 +274,119 @@ namespace Bak
 
                 foreach (var side in c.Value.OuterNodes)
                 {
-                    if (side.Value.IsResolved()) { continue; }
+                   // if (side.Value.IsResolved()) { continue; }
 
                     switch (side.Key)
                     {
                         case 'U':
-                           // var upperNeighbor = c.Value.GetUpperNeighbor();
-                            /*foreach (var n in side.Value)
+                            //get the upper neighbor
+                            Cluster neighbor = c.Value.GetNeighbor('U');
+                            if (neighbor == null) { continue; }
+
+                            //now we start tracking entrances between these clusters.
+                            List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
+                            foreach (var n in side.Value)
                             {
                                 int id = n - gMap.Width;
-                                if (!gMap.Nodes.ContainsKey(id)) //cluster doesn't exist -> continue
-                                { continue;}
+                                if (gMap.Nodes[n].IsTraversable() && gMap.Nodes[id].IsTraversable())
+                                {
+                                    //ITEM1 is the Cluster node, ITEM2 is the NEIGHBOR cluster node
+                                    possibleEntrances.Add(Tuple.Create(n, id));
+                                }
+                                else
+                                {
+                                    //there is an obstacle on either side of the outer nodes. 
+                                    //get the number of items in hte possibleEntrances and create the cluster Nodes.
+                                    //after that, clear the possibleEntrances list and continue;
+                                    if (possibleEntrances.Count != 0 && possibleEntrances.Count < 5)
+                                    {
+                                        //make a single entrance in the middle.
+                                        //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
+                                        Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
 
-                                //else, if the node is a valid gNode, we get its HPACluster Parent.
-                                Cluster c2 = HierarchicalGraph[0].Clusters[gMap.Nodes[id].HPAClusterParent];
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item1))
+                                        {
+                                            ClusterNode c1 = new ClusterNode(entrance.Item1);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
+                                        }
 
-                                //now we start tracking entrances between these clusters.
-                                List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item2))
+                                        {
+                                            ClusterNode c2 = new ClusterNode(entrance.Item2);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+                                        }
 
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.ContainsKey(entrance.Item2))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.Add(entrance.Item2, 1);
+                                        }
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.ContainsKey(entrance.Item1))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.Add(entrance.Item1, 1);
+                                        }
 
+                                        possibleEntrances.Clear();
 
+                                    }
+                                    else if (possibleEntrances.Count >= 5)//the continuous entrance length is higher than/equal to 5
+                                    {
+                                        //we create two entrances in this case, one on the start and one on the end.
+                                        Tuple<int, int> entrance1 = possibleEntrances[0];
+                                        Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
 
-                            }*/
+                                        //------------------FIRST
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item1))
+                                        {
+                                            ClusterNode c1 = new ClusterNode(entrance1.Item1);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
+                                        }
+
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item2))
+                                        {
+                                            ClusterNode c2 = new ClusterNode(entrance1.Item2);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+                                        }
+
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.ContainsKey(entrance1.Item2))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.Add(entrance1.Item2, 1);
+                                        }
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.ContainsKey(entrance1.Item1))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.Add(entrance1.Item1, 1);
+                                        }
+                                        //-----------------SECOND
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item1))
+                                        {
+                                            ClusterNode c1 = new ClusterNode(entrance2.Item1);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
+                                        }
+
+                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item2))
+                                        {
+                                            ClusterNode c2 = new ClusterNode(entrance2.Item2);
+                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+                                        }
+
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.ContainsKey(entrance2.Item2))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.Add(entrance2.Item2, 1);
+                                        }
+                                        if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.ContainsKey(entrance2.Item1))
+                                        {
+                                            HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.Add(entrance2.Item1, 1);
+                                        }
+
+                                        possibleEntrances.Clear();
+                                    }
+                                }
+                            }
                             break;
 
                         case 'D':
@@ -540,7 +630,7 @@ namespace Bak
             {
                 //the node in openSet having the lowest fScore value
                 currNode = openSet.OrderBy(i => fScore[i.Key]).FirstOrDefault().Key;
-                if (end.InnerNodes.Contains(currNode))
+                if (end.InnerNodes.Contains(currNode) && end.ClusterNodes[gMap.EndNodeID].Neighbors.ContainsKey(currNode))
                 {
                     //break the loop and reconstruct path below
                     //we reached the end cluster. Break and finish the path to the end node below
@@ -687,7 +777,7 @@ namespace Bak
 
         private float H_startEnd(int startID, int endID)
         {
-            return 1 * (Math.Abs(gMap.Nodes[startID].Location.X - gMap.Nodes[endID].Location.X) + Math.Abs(gMap.Nodes[startID].Location.Y - gMap.Nodes[endID].Location.Y));
+            return 1 * (Math.Abs(gMap.Nodes[startID].Location.X/30 - gMap.Nodes[endID].Location.X/30) + Math.Abs(gMap.Nodes[startID].Location.Y/30 - gMap.Nodes[endID].Location.Y/30));
         }
         
         private HashSet<Cluster> getHPAClusterNeighbors(Cluster c)

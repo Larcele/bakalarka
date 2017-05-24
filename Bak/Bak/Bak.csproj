@@ -46,7 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractionLayer.cs" />
+    <Compile Include="HPAstar\AbstractionLayer.cs" />
     <Compile Include="HPAstar\Cluster.cs" />
     <Compile Include="ColorPalette.cs" />
     <Compile Include="HPAstar\ClusterNode.cs" />
