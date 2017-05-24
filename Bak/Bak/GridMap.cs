@@ -132,7 +132,7 @@ namespace Bak
         /// <param name="id1">neighbor node 1 id</param>
         /// <param name="id2">neighbor node 2 id</param>
         /// <returns></returns>
-        private bool SameRow(int id1, int id2)
+        public bool SameRow(int id1, int id2)
         {
             if (Nodes.ContainsKey(id1) && Nodes.ContainsKey(id2))
             {

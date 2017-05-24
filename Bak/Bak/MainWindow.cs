@@ -39,7 +39,7 @@ namespace Bak
 
         List<int> PathfindingSolution = new List<int>();
         HashSet<int> searchedNodes = new HashSet<int>();
-        string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "GMaps", "map04.gmap");
+        string FilePath = Path.Combine(Directory.GetCurrentDirectory(), "GMaps", "map02.gmap");
 
         GameMap gMap;
         public MainWindow()
@@ -435,6 +435,7 @@ namespace Bak
         
         private void b_startPathFinding_Click(object sender, EventArgs e)
         {
+            expandedNodesCount = 0;
             testShouldRun = false;
             pathCost = 0;
             testPCount = 0;
@@ -678,6 +679,7 @@ namespace Bak
             while (currNodeID > -1)
             {
                 searchedNodes.Add(currNodeID);
+                expandedNodesCount++;
                 //change bg color to indicate it was searched
                 setSearchedBgColor(currNodeID);
                 
@@ -738,11 +740,11 @@ namespace Bak
 
         private void StartAstarSearch(object sender, DoWorkEventArgs e)
         {
-            List<int> closedSet = new List<int>();
-            List<int> openSet = new List<int>();
+            bool[] closedSet = new bool[gMap.Nodes.Count];
+            Dictionary<int, Node> openSet = new Dictionary<int, Node>();
 
             //starting node is in the open set
-            openSet.Add(gMap.StartNodeID);
+            openSet.Add(gMap.StartNodeID, gMap.Nodes[gMap.StartNodeID]);
 
             // For each node, which node it can most efficiently be reached from.
             // If a node can be reached from many nodes, cameFrom will eventually contain the
@@ -777,7 +779,8 @@ namespace Bak
             while (openSet.Count != 0)
             {
                 //the node in openSet having the lowest fScore value
-                currNode = openSet.OrderBy(i => fScore[i]).FirstOrDefault();
+                currNode = openSet.OrderBy(i => fScore[i.Key]).FirstOrDefault().Key;
+                
                 if (currNode == gMap.EndNodeID)
                 {
                     //break the loop and reconstruct path below
@@ -786,21 +789,22 @@ namespace Bak
                 }
 
                 openSet.Remove(currNode);
-                closedSet.Add(currNode); //"added" to closedList
+                closedSet[currNode] = true; //"added" to closedList
 
                 foreach (var neighbor in gMap.Nodes[currNode].Neighbors)
                 {
                     // Ignore the neighbor which is already evaluated or it is non-traversable.
-                    if (gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet.Contains(neighbor.Key))
+                    if (gMap.Nodes[neighbor.Key].Type == GameMap.NodeType.Obstacle || closedSet[neighbor.Key])
                     { continue; }
 
                     float tentativeG = gScore[currNode] + neighbor.Value; // The distance from start to a neighbor
 
-                    if (!openSet.Contains(neighbor.Key)) // Discover a new node
+                    if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
                     {
                         searchedNodes.Add(neighbor.Key);
+                        expandedNodesCount++;
                         setSearchedBgColor(neighbor.Key); 
-                        openSet.Add(neighbor.Key);
+                        openSet.Add(neighbor.Key, gMap.Nodes[neighbor.Key]);
                     }
                     else if (tentativeG >= gScore[neighbor.Key])
                     {
@@ -846,13 +850,13 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X) + Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y));
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X/30 - gMap.Nodes[gMap.EndNodeID].Location.X/30) + Math.Abs(gMap.Nodes[n].Location.Y/30 - gMap.Nodes[gMap.EndNodeID].Location.Y/30));
 
                 case Heuristic.DiagonalShortcut:
                     
                     float h = 0;
-                    int dx = Math.Abs(gMap.Nodes[n].Location.X - gMap.Nodes[gMap.EndNodeID].Location.X);
-                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - gMap.Nodes[gMap.EndNodeID].Location.Y);
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X/30 - gMap.Nodes[gMap.EndNodeID].Location.X/30);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y/30 - gMap.Nodes[gMap.EndNodeID].Location.Y/30);
                     if (dx > dy)
                         h = 1.4f * dy + 1 * (dx - dy);
                     else
@@ -888,7 +892,9 @@ namespace Bak
             {
                 gMap.Nodes[id].BackColor = id != gMap.StartNodeID && id != gMap.EndNodeID ? ColorPalette.NodeColor_Path : ColorPalette.NodeTypeColor[gMap.Nodes[id].Type];
             }
+
             ThreadHelperClass.SetText(this, l_pathCost, pathCost.ToString());
+            ThreadHelperClass.SetText(this, tb_expandedN, expandedNodesCount + "");
         }
 
         private void backtrackMap(List<int> path, Node current)
@@ -896,6 +902,7 @@ namespace Bak
             //not needed for pathfinding; remembered for future map refreshing, 
             //prevents accessing nodes that weren't changed.
             searchedNodes.Add(current.ID);
+            expandedNodesCount++;
 
             path.Add(current.ID);
             gMap.Nodes[current.ID].BackColor = (gMap.Nodes[current.ID].Type != GameMap.NodeType.EndPosition && gMap.Nodes[current.ID].Type != GameMap.NodeType.StartPosition) ? ColorPalette.NodeColor_Visited : ColorPalette.NodeTypeColor[gMap.Nodes[current.ID].Type];
@@ -981,9 +988,12 @@ namespace Bak
                        // if (gMap.Nodes[nodeID].IsTraversable())
                        // { gMap.Nodes[nodeID].BackColor = col; }
                     }
-                    foreach (int nodeID in c.OuterNodes)
+                    foreach (var pair in c.OuterNodes)
                     {
-                        gMap.Nodes[nodeID].BackColor = Color.White;
+                        foreach (int nodeID in pair.Value)
+                        {
+                            gMap.Nodes[nodeID].BackColor = Color.White;
+                        }
                     }
                     foreach (var cNode in c.ClusterNodes.Values)
                     {

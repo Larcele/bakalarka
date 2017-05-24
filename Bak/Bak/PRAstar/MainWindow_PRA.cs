@@ -19,6 +19,7 @@ namespace Bak
         /// determines whenever a test has already triggered for a TestCase
         /// </summary>
         bool testShouldRun = false;
+        int expandedNodesCount = 0;
         TestCase selectedTest;
         Dictionary<string, List<TestCase>> MapTests = new Dictionary<string, List<TestCase>>();
         Dictionary<int, PRAbstractionLayer> PRAstarHierarchy = new Dictionary<int, PRAbstractionLayer>();
@@ -321,6 +322,7 @@ namespace Bak
                     if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
                     {
                         searchedNodes.Add(neighbor.Key);
+                        expandedNodesCount++;
                         setSearchedBgColor(neighbor.Key);
                         openSet.Add(neighbor.Key, gMap.Nodes[neighbor.Key]);
                     }
@@ -419,6 +421,7 @@ namespace Bak
                     if (!openSet.ContainsKey(neighbor.Key)) // Discover a new node
                     {
                         searchedNodes.Add(neighbor.Key);
+                        expandedNodesCount++;
                         openSet.Add(neighbor.Key, layer.ClusterNodes[neighbor.Key]);
                     }
                     else if (tentativeG >= gScore[neighbor.Key])
@@ -1100,12 +1103,12 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X - end.X) + Math.Abs(gMap.Nodes[n].Location.Y - end.Y));
+                    return 1 * (Math.Abs(gMap.Nodes[n].Location.X/30 - end.X/30) + Math.Abs(gMap.Nodes[n].Location.Y/30 - end.Y/30));
 
                 case Heuristic.DiagonalShortcut:
                     float h = 0;
-                    int dx = Math.Abs(gMap.Nodes[n].Location.X - end.X);
-                    int dy = Math.Abs(gMap.Nodes[n].Location.Y - end.Y);
+                    int dx = Math.Abs(gMap.Nodes[n].Location.X/30 - end.X/30);
+                    int dy = Math.Abs(gMap.Nodes[n].Location.Y/30 - end.Y/30);
                     if (dx > dy)
                         h = 1.4f * dy + 1 * (dx - dy);
                     else
@@ -1130,12 +1133,12 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
+                    return 1 * (Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30) + Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30));
 
                 case Heuristic.DiagonalShortcut:
                     float h = 0;
-                    int dx = Math.Abs(layer.ClusterNodes[n].X - end.X);
-                    int dy = Math.Abs(layer.ClusterNodes[n].Y - end.Y);
+                    int dx = Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30);
+                    int dy = Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30);
                     if (dx > dy)
                         h = 1.4f * dy + 1 * (dx - dy);
                     else

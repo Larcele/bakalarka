@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bak.HPAstar;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -49,6 +50,8 @@ namespace Bak
             //we make 10 x 10 clusters , from the pper left to the lower right.
             if (gMap.Width >= 20 && gMap.Height >= 20)
             {
+                HPACsize = 10;
+
                 int i = 0;
                 int j = 0;
                 for (j = 0; j <= gMap.Height / HPACsize; ++j)
@@ -63,12 +66,11 @@ namespace Bak
             {
                 int i = 0;
                 int j = 0;
-                int tmpClusterW = gMap.Width / 2;
-                int tmpClusterH = gMap.Height / 2;
+                HPACsize = gMap.Width / 2;
 
-                for (j = 0; j <= gMap.Height / tmpClusterH; ++j)
+                for (j = 0; j <= gMap.Height / HPACsize; ++j)
                 {
-                    for (i = 0; i < gMap.Width; i += tmpClusterW)
+                    for (i = 0; i < gMap.Width; i += HPACsize)
                     {
                         CreateHPACluster(layer, i, j);
                     }
@@ -185,11 +187,17 @@ namespace Bak
         
         public void CreateHPACluster(AbstractionLayer layer, int columnPos, int rowPos)
         {
-            Cluster c = new Cluster(layer.LastAssignedClusterID, new List<int>(), new List<int>());
+            Cluster c = new Cluster(layer.LastAssignedClusterID);
             layer.LastAssignedClusterID++;
 
-            List<int> innerNodes = new List<int>();
-            List<int> outerNodes = new List<int>();
+            HashSet<int> innerNodes = new HashSet<int>();
+            Dictionary<char, OuterNodeArea> outerNodes = new Dictionary<char, OuterNodeArea>
+            {
+                {'U', new OuterNodeArea() },
+                {'D', new OuterNodeArea() },
+                {'L', new OuterNodeArea() },
+                {'R', new OuterNodeArea() },
+            };
 
             int startY = rowPos * HPACsize * gMap.Width;
             int endY = startY == 0 ? HPACsize * gMap.Width : startY + gMap.Width * 10;
@@ -207,7 +215,21 @@ namespace Bak
                         innerNodes.Add(i + j);
                         if (j == startY || i == startX || i == endX - 1 || j + gMap.Width >= endY)
                         {
-                            outerNodes.Add(i + j);
+                            char direction = 'D'; //default init
+
+                            if (j == startY) //first row. 'U' outer node
+                            { direction = 'U'; }
+
+                            else if (i == startX) //first column. 'L' node
+                            { direction = 'L'; }
+
+                            else if (i == endX - 1) //last column. 'R' node
+                            { direction = 'R'; }
+
+                            else //j + gMap.Width >= endY. last row. 'D' node
+                            { direction = 'D'; }
+
+                            outerNodes[direction].Add(i + j);
                         }
                     }
 
@@ -237,7 +259,6 @@ namespace Bak
                     cnode.Value.AddNeighbor(n.ID, n);
                     n.AddNeighbor(cnode.Key, cnode.Value);
                 }
-
             }
         }
 
@@ -245,118 +266,167 @@ namespace Bak
         {
             foreach (var c in layer.Clusters)
             {
-                //get the neighbors of the cluster's outerNodes
-                var r1 = getHPAOuterNodesNeighbors(c.Value);
-                foreach (var neigh in c.Value.Neighbors)
+                //for every cluster, we look at its OuterNodes - all 4 sides.
+                //if a side is already resolved, we continue checking the othrs. 
+                //If it is not, we look at the neighboring nodes. If they are traversable, 
+                //we start tracking an entrance. We expand an entrance as long as both the neighboring nodes
+                //are traversable. If one of them is not, we stop, look at the number of entrances and 
+                //dependng on its size, create the corresponding number of cluster nodes. 
+
+                foreach (var side in c.Value.OuterNodes)
                 {
-                    var traversableOuters = neigh.Value.OuterNodes.Where(n => gMap.Nodes[n].IsTraversable()).ToList();
-                    List<int> res = new List<int>();
+                    if (side.Value.IsResolved()) { continue; }
 
-                    if (r1.Count > traversableOuters.Count)
+                    switch (side.Key)
                     {
-                        res = r1.Keys.Intersect(traversableOuters).ToList();
-                    }
-                    else
-                    {
-                        res = traversableOuters.Intersect(r1.Keys).ToList();
-                    }
-
-                    if (res.Count() != 0)
-                    {
-                        //if the intersection is less than 4 we create a single connection.
-                        if (res.Count() <= 5)
-                        {
-                            int index = res.Count() / 2;
-                            int cnodeNeighbor = res[index];
-
-                            //the second node is the corresponding neighbor from r1
-                            int cnode = r1[cnodeNeighbor];
-
-                            ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode);
-                            ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor);
-
-                            cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode].Neighbors[cnodeNeighbor]);
-                            neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor].Neighbors[cnode]);
-
-                            if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
+                        case 'U':
+                           // var upperNeighbor = c.Value.GetUpperNeighbor();
+                            /*foreach (var n in side.Value)
                             {
-                                if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
-                                {
-                                    //if the clusters don't contain these nodes, then set cluster parents, 
-                                    //raise ID and add them
-                                    c.Value.ClusterNodes.Add(cN.ID, cN);
-                                    cN.ClusterParent = c.Value.ID;
-                                    neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
-                                    neighN.ClusterParent = neigh.Value.ID;
+                                int id = n - gMap.Width;
+                                if (!gMap.Nodes.ContainsKey(id)) //cluster doesn't exist -> continue
+                                { continue;}
 
-                                    c.Value.LastAssignedCNodeID++;
-                                    neigh.Value.LastAssignedCNodeID++;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            int index1 = res.Count() - 1;
-                            int cnodeNeighbor1 = res[index1];
+                                //else, if the node is a valid gNode, we get its HPACluster Parent.
+                                Cluster c2 = HierarchicalGraph[0].Clusters[gMap.Nodes[id].HPAClusterParent];
 
-                            int index2 = 0;
-                            int cnodeNeighbor2 = res[index2];
+                                //now we start tracking entrances between these clusters.
+                                List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
 
-                            //the second node is the corresponding neighbor from r1
-                            int cnode1 = r1[cnodeNeighbor1];
 
-                            //the second node is the corresponding neighbor from r1
-                            int cnode2 = r1[cnodeNeighbor2];
 
-                            ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode1);
-                            ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor1);
 
-                            cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode1].Neighbors[cnodeNeighbor1]);
-                            neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor1].Neighbors[cnode1]);
+                            }*/
+                            break;
 
-                            if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
-                            {
-                                if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
-                                {
-                                    //if the clusters don't contain these nodes, then set cluster parents, 
-                                    //raise ID and add them
-                                    c.Value.ClusterNodes.Add(cN.ID, cN);
-                                    cN.ClusterParent = c.Value.ID;
-                                    neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
-                                    neighN.ClusterParent = neigh.Value.ID;
+                        case 'D':
+                            break;
 
-                                    c.Value.LastAssignedCNodeID++;
-                                    neigh.Value.LastAssignedCNodeID++;
-                                }
-                            }
+                        case 'L':
+                            break;
 
-                            ClusterNode cN2 = new ClusterNode(c.Value.LastAssignedCNodeID, cnode2);
-                            ClusterNode neighN2 = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor2);
-
-                            cN2.Neighbors.Add(neighN2.GNodeID, gMap.Nodes[cnode2].Neighbors[cnodeNeighbor2]);
-                            neighN2.Neighbors.Add(cN2.GNodeID, gMap.Nodes[cnodeNeighbor2].Neighbors[cnode2]);
-
-                            if (!c.Value.ClusterNodes.ContainsKey(cN2.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN2.ID))
-                            {
-                                if (!c.Value.CNodeHasGNodeIdOf(cN2) && !neigh.Value.CNodeHasGNodeIdOf(neighN2))
-                                {
-                                    //if the clusters don't contain these nodes, then set cluster parents, 
-                                    //raise ID and add them
-                                    c.Value.ClusterNodes.Add(cN2.ID, cN2);
-                                    cN2.ClusterParent = c.Value.ID;
-                                    neigh.Value.ClusterNodes.Add(neighN2.ID, neighN2);
-                                    neighN2.ClusterParent = neigh.Value.ID;
-
-                                    c.Value.LastAssignedCNodeID++;
-                                    neigh.Value.LastAssignedCNodeID++;
-                                }
-                            }
-
-                        }
+                        case 'R':
+                            break;
                     }
-
                 }
             }
+
+            #region disgusting asduiakdj
+            /* foreach (var c in layer.Clusters)
+             {
+                 //get the neighbors of the cluster's outerNodes
+                 var r1 = getHPAOuterNodesNeighbors(c.Value);
+                 foreach (var neigh in c.Value.Neighbors)
+                 {
+                     var traversableOuters = neigh.Value.OuterNodes.Where(n => gMap.Nodes[n].IsTraversable()).ToList();
+                     List<int> res = new List<int>();
+
+                     if (r1.Count > traversableOuters.Count)
+                     {
+                         res = r1.Keys.Intersect(traversableOuters).ToList();
+                     }
+                     else
+                     {
+                         res = traversableOuters.Intersect(r1.Keys).ToList();
+                     }
+
+                     if (res.Count() != 0)
+                     {
+                         //if the intersection is less than 4 we create a single connection.
+                         if (res.Count() <= 5)
+                         {
+                             int index = res.Count() / 2;
+                             int cnodeNeighbor = res[index];
+
+                             //the second node is the corresponding neighbor from r1
+                             int cnode = r1[cnodeNeighbor];
+
+                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode);
+                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor);
+
+                             cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode].Neighbors[cnodeNeighbor]);
+                             neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor].Neighbors[cnode]);
+
+                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
+                             {
+                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
+                                 {
+                                     //if the clusters don't contain these nodes, then set cluster parents, 
+                                     //raise ID and add them
+                                     c.Value.ClusterNodes.Add(cN.ID, cN);
+                                     cN.ClusterParent = c.Value.ID;
+                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
+                                     neighN.ClusterParent = neigh.Value.ID;
+
+                                     c.Value.LastAssignedCNodeID++;
+                                     neigh.Value.LastAssignedCNodeID++;
+                                 }
+                             }
+                         }
+                         else
+                         {
+                             int index1 = res.Count() - 1;
+                             int cnodeNeighbor1 = res[index1];
+
+                             int index2 = 0;
+                             int cnodeNeighbor2 = res[index2];
+
+                             //the second node is the corresponding neighbor from r1
+                             int cnode1 = r1[cnodeNeighbor1];
+
+                             //the second node is the corresponding neighbor from r1
+                             int cnode2 = r1[cnodeNeighbor2];
+
+                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode1);
+                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor1);
+
+                             cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode1].Neighbors[cnodeNeighbor1]);
+                             neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor1].Neighbors[cnode1]);
+
+                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
+                             {
+                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
+                                 {
+                                     //if the clusters don't contain these nodes, then set cluster parents, 
+                                     //raise ID and add them
+                                     c.Value.ClusterNodes.Add(cN.ID, cN);
+                                     cN.ClusterParent = c.Value.ID;
+                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
+                                     neighN.ClusterParent = neigh.Value.ID;
+
+                                     c.Value.LastAssignedCNodeID++;
+                                     neigh.Value.LastAssignedCNodeID++;
+                                 }
+                             }
+
+                             ClusterNode cN2 = new ClusterNode(c.Value.LastAssignedCNodeID, cnode2);
+                             ClusterNode neighN2 = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor2);
+
+                             cN2.Neighbors.Add(neighN2.GNodeID, gMap.Nodes[cnode2].Neighbors[cnodeNeighbor2]);
+                             neighN2.Neighbors.Add(cN2.GNodeID, gMap.Nodes[cnodeNeighbor2].Neighbors[cnode2]);
+
+                             if (!c.Value.ClusterNodes.ContainsKey(cN2.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN2.ID))
+                             {
+                                 if (!c.Value.CNodeHasGNodeIdOf(cN2) && !neigh.Value.CNodeHasGNodeIdOf(neighN2))
+                                 {
+                                     //if the clusters don't contain these nodes, then set cluster parents, 
+                                     //raise ID and add them
+                                     c.Value.ClusterNodes.Add(cN2.ID, cN2);
+                                     cN2.ClusterParent = c.Value.ID;
+                                     neigh.Value.ClusterNodes.Add(neighN2.ID, neighN2);
+                                     neighN2.ClusterParent = neigh.Value.ID;
+
+                                     c.Value.LastAssignedCNodeID++;
+                                     neigh.Value.LastAssignedCNodeID++;
+                                 }
+                             }
+
+                         }
+                     }
+
+                 }
+             }*/
+            #endregion
         }
         
         private void BuildClusterNodeIntraEdges(AbstractionLayer layer)
@@ -396,7 +466,9 @@ namespace Bak
             foreach (var node in clusterOfNodesTosearch.ClusterNodes.Values)
             {
                 //the distance was computed already
-                if (current.Neighbors.ContainsKey(node.GNodeID) || current == node) { continue; }
+                if (current.Neighbors.ContainsKey(node.GNodeID) 
+                    || node.Neighbors.ContainsKey(current.GNodeID) 
+                    || current == node) { continue; }
 
                 float cost = AstarDistance(current.GNodeID, node.GNodeID, clusterOfNodesTosearch.InnerNodes);
                 if (cost == 0)
@@ -523,7 +595,7 @@ namespace Bak
 
         }
 
-        private float AstarDistance(int startID, int endID, List<int> nodesToSearch)
+        private float AstarDistance(int startID, int endID, HashSet<int> nodesToSearch)
         {
             float res = 0;
 
@@ -618,82 +690,140 @@ namespace Bak
             return 1 * (Math.Abs(gMap.Nodes[startID].Location.X - gMap.Nodes[endID].Location.X) + Math.Abs(gMap.Nodes[startID].Location.Y - gMap.Nodes[endID].Location.Y));
         }
         
-        private List<Cluster> getHPAClusterNeighbors(Cluster c)
+        private HashSet<Cluster> getHPAClusterNeighbors(Cluster c)
         {
-            List<Cluster> res = new List<Cluster>();
-            foreach (int n in c.OuterNodes)
+            HashSet<Cluster> res = new HashSet<Cluster>();
+            foreach (var pair in c.OuterNodes)
             {
-                foreach (var n2 in gMap.Nodes[n].Neighbors.Keys)
+                switch (pair.Key)
                 {
-                    Node neigh = gMap.Nodes[n2];
-                    if (neigh.IsTraversable() && !c.OuterNodes.Contains(n2))
-                    {
-                        //get the HPAClusterParent of this node and add it to the list
-                        int parentID = neigh.HPAClusterParent;
-                        Cluster p = HierarchicalGraph[0].Clusters[parentID];
-                        if (!res.Contains(p))
+                    case 'U':
+                        foreach (int n in c.OuterNodes['U'])
                         {
-                            res.Add(p);
+                            //we look up grom the upper outer nodes
+                            int newIndex = n - gMap.Width;
+
+                            //if the map contains a node with this ID, we check all of the nodes one row up and
+                            //determine whenever there is a path between them, and, therefore, if they are neighbors
+                            if (gMap.Nodes.ContainsKey(newIndex))
+                            {
+                                if (gMap.Nodes[newIndex].IsTraversable() && gMap.Nodes[n].IsTraversable())
+                                {
+                                    //they are neighbors
+                                    //get the HPAClusterParent of this node and add it to the list
+                                    int parentID = gMap.Nodes[newIndex].HPAClusterParent;
+                                    Cluster p = HierarchicalGraph[0].Clusters[parentID];
+
+                                    //'p' cluster is the one *upper* to the 'c'
+                                    //'c' cluster is the one *lower* to the 'p'
+                                    p.AddNeighborDirection(c, 'D');
+                                    c.AddNeighborDirection(p, 'U');
+
+                                    res.Add(p);
+
+                                    break;
+                                }
+                            }
+                            else { break; } //no cluster exists on the up side of current cluster.
                         }
-                    }
+                        break;
+
+                    case 'D':
+                        foreach (int n in c.OuterNodes['D'])
+                        {
+                            //we look down from the lower outer nodes
+                            int newIndex = n + gMap.Width;
+
+                            //if the map contains a node with this ID, we check all of the nodes one row down and
+                            //determine whenever there is a path between them, and, therefore, if they are neighbors
+                            if (gMap.Nodes.ContainsKey(newIndex))
+                            {
+                                if (gMap.Nodes[newIndex].IsTraversable() && gMap.Nodes[n].IsTraversable())
+                                {
+                                    //they are neighbors
+                                    //get the HPAClusterParent of this node and add it to the list
+                                    int parentID = gMap.Nodes[newIndex].HPAClusterParent;
+                                    Cluster p = HierarchicalGraph[0].Clusters[parentID];
+
+                                    //'p' cluster is the one *lower* to the 'c'
+                                    //'c' cluster is the one *upper* to the 'p'
+                                    p.AddNeighborDirection(c, 'U');
+                                    c.AddNeighborDirection(p, 'D');
+
+                                    res.Add(p);
+
+                                    break;
+                                }
+                            }
+                            else { break; } //no cluster exists on the down side of current cluster.
+                        }
+                        break;
+
+                    case 'L':
+                        foreach (int n in c.OuterNodes['L'])
+                        {
+                            //we look to the left from the left outer nodes
+                            int newIndex = n - 1;
+
+                            //if the map contains a node with this ID, we check all of the nodes one row left and
+                            //determine whenever there is a path between them, and, therefore, if they are neighbors
+                            if (gMap.Nodes.ContainsKey(newIndex))
+                            {
+                                if (gMap.Nodes[newIndex].IsTraversable() && gMap.Nodes[n].IsTraversable() && ((GridMap)gMap).SameRow(n, newIndex))
+                                {
+                                    //they are neighbors
+                                    //get the HPAClusterParent of this node and add it to the list
+                                    int parentID = gMap.Nodes[newIndex].HPAClusterParent;
+                                    Cluster p = HierarchicalGraph[0].Clusters[parentID];
+
+                                    //'p' cluster is the one *more left* to the 'c'
+                                    //'c' cluster is the one *more right* to the 'p'
+                                    p.AddNeighborDirection(c, 'R');
+                                    c.AddNeighborDirection(p, 'L');
+
+
+                                    res.Add(p);
+
+                                    break;
+                                }
+                            }
+                            else { break; } //no cluster exists on the down side of current cluster.
+                        }
+                        break;
+
+                    case 'R':
+                        foreach (int n in c.OuterNodes['R'])
+                        {
+                            //we look to the right from the right outer nodes
+                            int newIndex = n + 1;
+
+                            //if the map contains a node with this ID, we check all of the nodes one row left and
+                            //determine whenever there is a path between them, and, therefore, if they are neighbors
+                            if (gMap.Nodes.ContainsKey(newIndex))
+                            {
+                                if (gMap.Nodes[newIndex].IsTraversable() && gMap.Nodes[n].IsTraversable() && ((GridMap)gMap).SameRow(n, newIndex))
+                                {
+                                    //they are neighbors
+                                    //get the HPAClusterParent of this node and add it to the list
+                                    int parentID = gMap.Nodes[newIndex].HPAClusterParent;
+                                    Cluster p = HierarchicalGraph[0].Clusters[parentID];
+
+                                    //'p' cluster is the one *more right* to the 'c'
+                                    //'c' cluster is the one *more left* to the 'p'
+                                    p.AddNeighborDirection(c, 'L');
+                                    c.AddNeighborDirection(p, 'R');
+
+                                    res.Add(p);
+
+                                    break;
+                                }
+                            }
+                            else { break; } //no cluster exists on the down side of current cluster.
+                        }
+                        break;
                 }
             }
             return res;
         }
-
-        /// <summary>
-        /// Builds a dictionary of pairs of nodes; 
-        /// the key is the NEIGHBOR node of the Clucter c; the value is THE node from Cluster c.
-        /// </summary>
-        /// <param name="c"></param>
-        /// <returns></returns>
-        private Dictionary<int, int> getHPAOuterNodesNeighbors(Cluster c)
-        {
-            Dictionary<int,int> res = new Dictionary<int, int>();
-            foreach (int n in c.OuterNodes)
-            {
-                if (!gMap.Nodes[n].IsTraversable()) { continue;}
-
-                foreach (var n2 in gMap.Nodes[n].Neighbors.Keys)
-                {
-                    Node neigh = gMap.Nodes[n2];
-                    if (neigh.IsTraversable() && !c.OuterNodes.Contains(n2) && !c.InnerNodes.Contains(neigh.ID))
-                    {
-                        if (!res.ContainsKey(neigh.ID))
-                        {
-                            res.Add(neigh.ID, n);
-                        }
-                    }
-                }
-            }
-            return res;
-        }
-
-        #region probably deprecated soon
-
-
-        private bool firstCol(int col, int first)
-        {
-            return col == first;
-        }
-
-        private bool lastCol(int col, int last)
-        {
-            return col == last;
-        }
-
-        private bool lastRow(int row, int last)
-        {
-            return row <= last && row >= last - gMap.Width;
-        }
-
-        private bool firstRow(int row, int first)
-        {
-            return row == first;
-        }
-
-
-        #endregion
-
     }
 }

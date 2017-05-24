@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bak.HPAstar;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,13 +9,13 @@ namespace Bak
 {
     public class Cluster
     {
-        List<int> innerNodes = new List<int>();
-        List<int> outerNodes = new List<int>();
+        HashSet<int> innerNodes = new HashSet<int>();
         int id;
 
         public int ID { get { return id; } }
-        public List<int> InnerNodes { get { return innerNodes; } }
-        public List<int> OuterNodes { get { return outerNodes; } }
+        public HashSet<int> InnerNodes { get { return innerNodes; } }
+        public Dictionary<char, OuterNodeArea> OuterNodes = new Dictionary<char, OuterNodeArea>();
+        //public HashSet<int> OuterNodes { get { return outerNodes; } }
 
         public int LastAssignedCNodeID = 0;
 
@@ -22,6 +23,8 @@ namespace Bak
         /// neighboring HPAClusters
         /// </summary>
         public Dictionary<int, Cluster> Neighbors = new Dictionary<int, Cluster>();
+
+        public Dictionary<char, Cluster> DirectioNeighbor = new Dictionary<char, Cluster>();
         /// <summary>
         /// the distances between cluster nodes, pre-computed by A*
         /// </summary>
@@ -30,25 +33,29 @@ namespace Bak
         public Cluster(int id)
         {
             this.id = id;
-        }
 
-        public Cluster(int id, List<int> innerNodes, List<int> outerNodes)
-        {
-            this.id = id;
-            this.innerNodes = innerNodes;
-            this.outerNodes = outerNodes;
+            OuterNodes.Add('U', new OuterNodeArea());
+            OuterNodes.Add('D', new OuterNodeArea());
+            OuterNodes.Add('L', new OuterNodeArea());
+            OuterNodes.Add('R', new OuterNodeArea());
         }
-
-        public void SetInnerNodes(List<int> inNodes)
+        
+        public void SetInnerNodes(HashSet<int> inNodes)
         {
             InnerNodes.Clear();
-            InnerNodes.AddRange(inNodes);
+            foreach (var rn in inNodes)
+            {
+                InnerNodes.Add(rn);
+            }
         }
 
-        public void SetOuterNodes(List<int> outNodes)
+        public void SetOuterNodes(Dictionary<char, OuterNodeArea> outNodes)
         {
             OuterNodes.Clear();
-            OuterNodes.AddRange(outNodes);
+            foreach (var rn in outNodes)
+            {
+                OuterNodes[rn.Key] = rn.Value;
+            }
         }
 
         /// <summary>
@@ -61,6 +68,14 @@ namespace Bak
             if (!Neighbors.ContainsKey(key) && key != this.ID)
             {
                 Neighbors.Add(key, value);
+            }
+        }
+
+        internal void AddNeighborDirection(Cluster neighbor, char dir)
+        {
+            if (!this.DirectioNeighbor.ContainsKey(dir))
+            {
+                DirectioNeighbor.Add(dir, neighbor);
             }
         }
 
@@ -90,5 +105,6 @@ namespace Bak
         {
             return "HPACluster ID: " + ID + " Neighbors: {" + getNeighbors() + "} ";
         }
+        
     }
 }

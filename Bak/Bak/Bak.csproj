@@ -47,9 +47,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractionLayer.cs" />
-    <Compile Include="Cluster.cs" />
+    <Compile Include="HPAstar\Cluster.cs" />
     <Compile Include="ColorPalette.cs" />
-    <Compile Include="ClusterNode.cs" />
+    <Compile Include="HPAstar\ClusterNode.cs" />
+    <Compile Include="HPAstar\OuterNodeArea.cs" />
     <Compile Include="MainWindow.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -58,7 +59,7 @@
     </Compile>
     <Compile Include="GameMap.cs" />
     <Compile Include="GridMap.cs" />
-    <Compile Include="MainWindow_HPA.cs">
+    <Compile Include="HPAstar\MainWindow_HPA.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Node.cs">
@@ -68,9 +69,9 @@
       <DependentUpon>Node.cs</DependentUpon>
     </Compile>
     <Compile Include="NodeInfo.cs" />
-    <Compile Include="PRAbstractionLayer.cs" />
-    <Compile Include="PRAClusterNode.cs" />
-    <Compile Include="MainWindow_PRA.cs">
+    <Compile Include="PRAstar\PRAbstractionLayer.cs" />
+    <Compile Include="PRAstar\PRAClusterNode.cs" />
+    <Compile Include="PRAstar\MainWindow_PRA.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Program.cs" />
