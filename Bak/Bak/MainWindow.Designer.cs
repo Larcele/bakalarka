@@ -30,14 +30,6 @@
         {
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.newMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x5ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x20ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x50ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x100ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x200ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x400ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.x700ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clustersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -86,101 +78,30 @@
             this.clustersToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1212, 29);
+            this.menuStrip1.Size = new System.Drawing.Size(1212, 30);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
             // fileToolStripMenuItem
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.newMapToolStripMenuItem,
             this.loadMapToolStripMenuItem,
             this.saveMapToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 25);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(46, 26);
             this.fileToolStripMenuItem.Text = "File";
-            // 
-            // newMapToolStripMenuItem
-            // 
-            this.newMapToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.x5ToolStripMenuItem,
-            this.x20ToolStripMenuItem,
-            this.x50ToolStripMenuItem,
-            this.x100ToolStripMenuItem,
-            this.x200ToolStripMenuItem,
-            this.x400ToolStripMenuItem,
-            this.x700ToolStripMenuItem});
-            this.newMapToolStripMenuItem.Name = "newMapToolStripMenuItem";
-            this.newMapToolStripMenuItem.Size = new System.Drawing.Size(158, 28);
-            this.newMapToolStripMenuItem.Text = "New map";
-            // 
-            // x5ToolStripMenuItem
-            // 
-            this.x5ToolStripMenuItem.Name = "x5ToolStripMenuItem";
-            this.x5ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x5ToolStripMenuItem.Tag = "5";
-            this.x5ToolStripMenuItem.Text = "5x5";
-            this.x5ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x20ToolStripMenuItem
-            // 
-            this.x20ToolStripMenuItem.Name = "x20ToolStripMenuItem";
-            this.x20ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x20ToolStripMenuItem.Tag = "20";
-            this.x20ToolStripMenuItem.Text = "20x20";
-            this.x20ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x50ToolStripMenuItem
-            // 
-            this.x50ToolStripMenuItem.Name = "x50ToolStripMenuItem";
-            this.x50ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x50ToolStripMenuItem.Tag = "50";
-            this.x50ToolStripMenuItem.Text = "50x50";
-            this.x50ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x100ToolStripMenuItem
-            // 
-            this.x100ToolStripMenuItem.Name = "x100ToolStripMenuItem";
-            this.x100ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x100ToolStripMenuItem.Tag = "100";
-            this.x100ToolStripMenuItem.Text = "100x100";
-            this.x100ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x200ToolStripMenuItem
-            // 
-            this.x200ToolStripMenuItem.Name = "x200ToolStripMenuItem";
-            this.x200ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x200ToolStripMenuItem.Tag = "200";
-            this.x200ToolStripMenuItem.Text = "200x200";
-            this.x200ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x400ToolStripMenuItem
-            // 
-            this.x400ToolStripMenuItem.Name = "x400ToolStripMenuItem";
-            this.x400ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x400ToolStripMenuItem.Tag = "400";
-            this.x400ToolStripMenuItem.Text = "400x400";
-            this.x400ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
-            // 
-            // x700ToolStripMenuItem
-            // 
-            this.x700ToolStripMenuItem.Name = "x700ToolStripMenuItem";
-            this.x700ToolStripMenuItem.Size = new System.Drawing.Size(150, 28);
-            this.x700ToolStripMenuItem.Tag = "700";
-            this.x700ToolStripMenuItem.Text = "700x700";
-            this.x700ToolStripMenuItem.Click += new System.EventHandler(this.newMapMenuItem_Click);
             // 
             // loadMapToolStripMenuItem
             // 
             this.loadMapToolStripMenuItem.Name = "loadMapToolStripMenuItem";
-            this.loadMapToolStripMenuItem.Size = new System.Drawing.Size(158, 28);
+            this.loadMapToolStripMenuItem.Size = new System.Drawing.Size(194, 28);
             this.loadMapToolStripMenuItem.Text = "Load map";
             this.loadMapToolStripMenuItem.Click += new System.EventHandler(this.loadMapToolStripMenuItem_Click);
             // 
             // saveMapToolStripMenuItem
             // 
             this.saveMapToolStripMenuItem.Name = "saveMapToolStripMenuItem";
-            this.saveMapToolStripMenuItem.Size = new System.Drawing.Size(158, 28);
+            this.saveMapToolStripMenuItem.Size = new System.Drawing.Size(194, 28);
             this.saveMapToolStripMenuItem.Text = "Save map";
             this.saveMapToolStripMenuItem.Click += new System.EventHandler(this.saveMapToolStripMenuItem_Click);
             // 
@@ -189,7 +110,7 @@
             this.clustersToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showHPAClustersToolStripMenuItem});
             this.clustersToolStripMenuItem.Name = "clustersToolStripMenuItem";
-            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 25);
+            this.clustersToolStripMenuItem.Size = new System.Drawing.Size(78, 26);
             this.clustersToolStripMenuItem.Text = "Clusters";
             // 
             // showHPAClustersToolStripMenuItem
@@ -577,19 +498,11 @@
         private System.Windows.Forms.Label l_nodeInfo;
         private System.Windows.Forms.TextBox tb_nodeInfo;
         private System.Windows.Forms.Panel p_editingMapModes;
-        private System.Windows.Forms.ToolStripMenuItem newMapToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x5ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x20ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x50ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x100ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x200ToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem x400ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clustersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showHPAClustersToolStripMenuItem;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Panel panel;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.ToolStripMenuItem x700ToolStripMenuItem;
         private System.Windows.Forms.TextBox l_pathCost;
         private System.Windows.Forms.TextBox tb_pathLength;
         private System.Windows.Forms.Label label7;

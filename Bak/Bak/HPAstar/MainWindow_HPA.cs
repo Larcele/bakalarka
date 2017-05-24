@@ -81,107 +81,6 @@ namespace Bak
             BuildClusterConnections(layer);
             BuildClusterNodes(layer);
             BuildClusterNodeIntraEdges(layer);
-
-            #region shite
-            /*int xDiv = gMap.Width / 2;
-            int yDiv = gMap.Height / 2;
-
-            int i;
-            int j;
-
-            Cluster c1 = new Cluster(0);
-            Cluster c2 = new Cluster(1);
-            Cluster c3 = new Cluster(2);
-            Cluster c4 = new Cluster(3);
-
-            List<int> inNodes = new List<int>();
-
-            //upper left cluser
-            for (i = 0; i < yDiv * gMap.Width; i += gMap.Width)
-            {
-                for (j = 0; j < xDiv; ++j)
-                {
-                    inNodes.Add(j + i);
-                    if (firstRow(i, 0) ||
-                        lastRow(i, yDiv * gMap.Width) ||
-                        firstCol(j, 0) ||
-                        lastCol(j, xDiv - 1)) { //this node could be one of the outer nodes later
-                        if (gMap.Nodes[i + j].IsTraversable())
-                        {
-                            c1.OuterNodes.Add(i + j);
-                        }
-                    }
-                }
-            }
-            c1.SetInnerNodes(inNodes);
-            inNodes.Clear();
-            //lower left cluster
-            for (i = yDiv * gMap.Width; i < gMap.Height * gMap.Width; i += gMap.Width)
-            {
-                for (j = 0; j < xDiv; ++j)
-                {
-                    inNodes.Add(j + i);
-                    if (firstRow(i, yDiv * gMap.Width) ||
-                        lastRow(i, gMap.Height * gMap.Width) ||
-                        firstCol(j, 0) ||
-                        lastCol(j, xDiv - 1)) { //this node could be one of hte outer nodes later
-                        if (gMap.Nodes[i + j].IsTraversable())
-                        {
-                            c2.OuterNodes.Add(i + j);
-                        }
-                    }
-                }
-            }
-            c2.SetInnerNodes(inNodes);
-            inNodes.Clear();
-            //upper right cluster
-            for (i = 0; i < yDiv * gMap.Width; i += gMap.Width)
-            {
-                for (j = xDiv; j < gMap.Width; ++j)
-                {
-                    inNodes.Add(j + i);
-                    if (firstRow(i, 0) ||
-                        lastRow(i, yDiv * gMap.Width) ||
-                        firstCol(j, xDiv) ||
-                        lastCol(j, gMap.Width - 1)) { //this node could be one of hte outer nodes later
-                        
-                        if (gMap.Nodes[i + j].IsTraversable())
-                        {
-                            c3.OuterNodes.Add(i + j);
-                        }
-                    }
-                }
-            }
-            c3.SetInnerNodes(inNodes);
-            inNodes.Clear();
-            //lower right cluster
-            for (i = yDiv * gMap.Width; i < gMap.Height * gMap.Width; i += gMap.Width)
-            {
-                for (j = xDiv; j < gMap.Width; ++j)
-                {
-                    inNodes.Add(j + i);
-                    if (firstRow(i, yDiv * gMap.Width) ||
-                        lastRow(i, gMap.Height * gMap.Width) ||
-                        firstCol(j, xDiv) ||
-                        lastCol(j, gMap.Width - 1) ) { //this node could be one of hte outer nodes later
-                    
-                        if (gMap.Nodes[i + j].IsTraversable())
-                        {
-                            c4.OuterNodes.Add(i + j);
-                        }
-                    }
-                }
-            }
-            c4.SetInnerNodes(inNodes);
-            inNodes.Clear();
-
-            List<Cluster> clusters = new List<Cluster> { c1, c2, c3, c4 };
-            AbstractionLayer absl = new AbstractionLayer(0, clusters);
-
-            HierarchicalGraph.Add(0, absl);
-
-            BuildClusterConnections(absl);*/
-            #endregion
         }
         
         public void CreateHPACluster(AbstractionLayer layer, int columnPos, int rowPos)
@@ -274,17 +173,19 @@ namespace Bak
 
                 foreach (var side in c.Value.OuterNodes)
                 {
-                   // if (side.Value.IsResolved()) { continue; }
+                    // if (side.Value.IsResolved()) { continue; }
 
+                    Cluster neighbor;
+                    List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
                     switch (side.Key)
                     {
                         case 'U':
                             //get the upper neighbor
-                            Cluster neighbor = c.Value.GetNeighbor('U');
+                            neighbor = c.Value.GetNeighbor('U');
                             if (neighbor == null) { continue; }
 
                             //now we start tracking entrances between these clusters.
-                            List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
+                            possibleEntrances = new List<Tuple<int, int>>();
                             foreach (var n in side.Value)
                             {
                                 int id = n - gMap.Width;
@@ -298,225 +199,162 @@ namespace Bak
                                     //there is an obstacle on either side of the outer nodes. 
                                     //get the number of items in hte possibleEntrances and create the cluster Nodes.
                                     //after that, clear the possibleEntrances list and continue;
-                                    if (possibleEntrances.Count != 0 && possibleEntrances.Count < 5)
+                                    if (possibleEntrances.Count > 0)
                                     {
-                                        //make a single entrance in the middle.
-                                        //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
-                                        Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
-
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item1))
+                                        if (possibleEntrances.Count < 5)
                                         {
-                                            ClusterNode c1 = new ClusterNode(entrance.Item1);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
-                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
-                                        }
+                                            //make a single entrance in the middle.
+                                            //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
+                                            Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
 
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item2))
+                                            createClusterNodes(c.Value, neighbor, entrance);
+                                            possibleEntrances.Clear();
+
+                                        }
+                                        else if (possibleEntrances.Count >= 5 && possibleEntrances.Count < 7)//the continuous entrance length is higher than/equal to 5
                                         {
-                                            ClusterNode c2 = new ClusterNode(entrance.Item2);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
-                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
-                                        }
+                                            //we create two entrances in this case, one on the start and one on the end.
+                                            Tuple<int, int> entrance1 = possibleEntrances[0];
+                                            Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
 
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.ContainsKey(entrance.Item2))
+                                            createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                            possibleEntrances.Clear();
+                                        }
+                                        else //>=7
                                         {
-                                            HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.Add(entrance.Item2, 1);
-                                        }
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.ContainsKey(entrance.Item1))
-                                        {
-                                            HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.Add(entrance.Item1, 1);
-                                        }
+                                            //we create two entrances in this case - the first one column from the start,
+                                            //the second one column from the end
+                                            Tuple<int, int> entrance1 = possibleEntrances[2];
+                                            Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 3];
 
-                                        possibleEntrances.Clear();
-
+                                            createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                            possibleEntrances.Clear();
+                                        }
                                     }
-                                    else if (possibleEntrances.Count >= 5)//the continuous entrance length is higher than/equal to 5
-                                    {
-                                        //we create two entrances in this case, one on the start and one on the end.
-                                        Tuple<int, int> entrance1 = possibleEntrances[0];
-                                        Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
+                                }
+                            }
+                            if (possibleEntrances.Count > 0)
+                            {
+                                if (possibleEntrances.Count < 5)
+                                {
+                                    //make a single entrance in the middle.
+                                    //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
+                                    Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
 
-                                        //------------------FIRST
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item1))
-                                        {
-                                            ClusterNode c1 = new ClusterNode(entrance1.Item1);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
-                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
-                                        }
+                                    createClusterNodes(c.Value, neighbor, entrance);
+                                    possibleEntrances.Clear();
+                                }
+                                else if (possibleEntrances.Count >= 5 && possibleEntrances.Count < 7)
+                                {
+                                    //we create two entrances in this case, one on the start and one on the end.
+                                    Tuple<int, int> entrance1 = possibleEntrances[0];
+                                    Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
 
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item2))
-                                        {
-                                            ClusterNode c2 = new ClusterNode(entrance1.Item2);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
-                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
-                                        }
+                                    createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                    possibleEntrances.Clear();
+                                }
+                                else //>= 7
+                                {
+                                    //we create two entrances in this case - the first one column from the start,
+                                    //the second one column from the end
+                                    Tuple<int, int> entrance1 = possibleEntrances[2];
+                                    Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 3];
 
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.ContainsKey(entrance1.Item2))
-                                        {
-                                            HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.Add(entrance1.Item2, 1);
-                                        }
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.ContainsKey(entrance1.Item1))
-                                        {
-                                            HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.Add(entrance1.Item1, 1);
-                                        }
-                                        //-----------------SECOND
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item1))
-                                        {
-                                            ClusterNode c1 = new ClusterNode(entrance2.Item1);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
-                                            c.Value.ClusterNodes.Add(c1.GNodeID, c1);
-                                        }
-
-                                        if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item2))
-                                        {
-                                            ClusterNode c2 = new ClusterNode(entrance2.Item2);
-                                            HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
-                                            neighbor.ClusterNodes.Add(c2.GNodeID, c2);
-                                        }
-
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.ContainsKey(entrance2.Item2))
-                                        {
-                                            HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.Add(entrance2.Item2, 1);
-                                        }
-                                        if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.ContainsKey(entrance2.Item1))
-                                        {
-                                            HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.Add(entrance2.Item1, 1);
-                                        }
-
-                                        possibleEntrances.Clear();
-                                    }
+                                    createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                    possibleEntrances.Clear();
                                 }
                             }
                             break;
 
-                        case 'D':
-                            break;
-
-                        case 'L':
-                            break;
-
                         case 'R':
+                            //get the neighbor on the right
+                            neighbor = c.Value.GetNeighbor('R');
+                            if (neighbor == null) { continue; }
+
+                            //now we start tracking entrances between these clusters.
+                            possibleEntrances = new List<Tuple<int, int>>();
+                            foreach (var n in side.Value)
+                            {
+                                int id = n + 1;
+                                if (gMap.Nodes[n].IsTraversable() && gMap.Nodes[id].IsTraversable() && ((GridMap)gMap).SameRow(n, id))
+                                {
+                                    //ITEM1 is the Cluster node, ITEM2 is the NEIGHBOR cluster node
+                                    possibleEntrances.Add(Tuple.Create(n, id));
+                                }
+                                else
+                                {
+                                    //there is an obstacle on either side of the outer nodes. 
+                                    //get the number of items in hte possibleEntrances and create the cluster Nodes.
+                                    //after that, clear the possibleEntrances list and continue;
+                                    if (possibleEntrances.Count > 0)
+                                    {
+                                        if (possibleEntrances.Count < 5)
+                                        {
+                                            //make a single entrance in the middle.
+                                            //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
+                                            Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
+
+                                            createClusterNodes(c.Value, neighbor, entrance);
+                                            possibleEntrances.Clear();
+
+                                        }
+                                        else if (possibleEntrances.Count >= 5 && possibleEntrances.Count < 7)//the continuous entrance length is higher than/equal to 5
+                                        {
+                                            //we create two entrances in this case, one on the start and one on the end.
+                                            Tuple<int, int> entrance1 = possibleEntrances[0];
+                                            Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
+
+                                            createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                            possibleEntrances.Clear();
+                                        }
+                                        else //>=7
+                                        {
+                                            //we create two entrances in this case - the first one column from the start,
+                                            //the second one column from the end
+                                            Tuple<int, int> entrance1 = possibleEntrances[2];
+                                            Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 3];
+
+                                            createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                            possibleEntrances.Clear();
+                                        }
+                                    }
+                                }
+                            }
+                            if (possibleEntrances.Count > 0)
+                            {
+                                if (possibleEntrances.Count < 5)
+                                {
+                                    //make a single entrance in the middle.
+                                    //the FIRST tuple item is the node of 'c' and the second item is the node of neighbor
+                                    Tuple<int, int> entrance = possibleEntrances[possibleEntrances.Count / 2];
+
+                                    createClusterNodes(c.Value, neighbor, entrance);
+                                    possibleEntrances.Clear();
+                                }
+                                else if (possibleEntrances.Count >= 5 && possibleEntrances.Count < 7)
+                                {
+                                    //we create two entrances in this case, one on the start and one on the end.
+                                    Tuple<int, int> entrance1 = possibleEntrances[0];
+                                    Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 1];
+
+                                    createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                    possibleEntrances.Clear();
+                                }
+                                else //>= 7
+                                {
+                                    //we create two entrances in this case - the first one column from the start,
+                                    //the second one column from the end
+                                    Tuple<int, int> entrance1 = possibleEntrances[2];
+                                    Tuple<int, int> entrance2 = possibleEntrances[possibleEntrances.Count - 3];
+
+                                    createClusterNodes(c.Value, neighbor, entrance1, entrance2);
+                                    possibleEntrances.Clear();
+                                }
+                            }
                             break;
                     }
                 }
             }
-
-            #region disgusting asduiakdj
-            /* foreach (var c in layer.Clusters)
-             {
-                 //get the neighbors of the cluster's outerNodes
-                 var r1 = getHPAOuterNodesNeighbors(c.Value);
-                 foreach (var neigh in c.Value.Neighbors)
-                 {
-                     var traversableOuters = neigh.Value.OuterNodes.Where(n => gMap.Nodes[n].IsTraversable()).ToList();
-                     List<int> res = new List<int>();
-
-                     if (r1.Count > traversableOuters.Count)
-                     {
-                         res = r1.Keys.Intersect(traversableOuters).ToList();
-                     }
-                     else
-                     {
-                         res = traversableOuters.Intersect(r1.Keys).ToList();
-                     }
-
-                     if (res.Count() != 0)
-                     {
-                         //if the intersection is less than 4 we create a single connection.
-                         if (res.Count() <= 5)
-                         {
-                             int index = res.Count() / 2;
-                             int cnodeNeighbor = res[index];
-
-                             //the second node is the corresponding neighbor from r1
-                             int cnode = r1[cnodeNeighbor];
-
-                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode);
-                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor);
-
-                             cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode].Neighbors[cnodeNeighbor]);
-                             neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor].Neighbors[cnode]);
-
-                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
-                             {
-                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
-                                 {
-                                     //if the clusters don't contain these nodes, then set cluster parents, 
-                                     //raise ID and add them
-                                     c.Value.ClusterNodes.Add(cN.ID, cN);
-                                     cN.ClusterParent = c.Value.ID;
-                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
-                                     neighN.ClusterParent = neigh.Value.ID;
-
-                                     c.Value.LastAssignedCNodeID++;
-                                     neigh.Value.LastAssignedCNodeID++;
-                                 }
-                             }
-                         }
-                         else
-                         {
-                             int index1 = res.Count() - 1;
-                             int cnodeNeighbor1 = res[index1];
-
-                             int index2 = 0;
-                             int cnodeNeighbor2 = res[index2];
-
-                             //the second node is the corresponding neighbor from r1
-                             int cnode1 = r1[cnodeNeighbor1];
-
-                             //the second node is the corresponding neighbor from r1
-                             int cnode2 = r1[cnodeNeighbor2];
-
-                             ClusterNode cN = new ClusterNode(c.Value.LastAssignedCNodeID, cnode1);
-                             ClusterNode neighN = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor1);
-
-                             cN.Neighbors.Add(neighN.GNodeID, gMap.Nodes[cnode1].Neighbors[cnodeNeighbor1]);
-                             neighN.Neighbors.Add(cN.GNodeID, gMap.Nodes[cnodeNeighbor1].Neighbors[cnode1]);
-
-                             if (!c.Value.ClusterNodes.ContainsKey(cN.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN.ID))
-                             {
-                                 if (!c.Value.CNodeHasGNodeIdOf(cN) && !neigh.Value.CNodeHasGNodeIdOf(neighN))
-                                 {
-                                     //if the clusters don't contain these nodes, then set cluster parents, 
-                                     //raise ID and add them
-                                     c.Value.ClusterNodes.Add(cN.ID, cN);
-                                     cN.ClusterParent = c.Value.ID;
-                                     neigh.Value.ClusterNodes.Add(neighN.ID, neighN);
-                                     neighN.ClusterParent = neigh.Value.ID;
-
-                                     c.Value.LastAssignedCNodeID++;
-                                     neigh.Value.LastAssignedCNodeID++;
-                                 }
-                             }
-
-                             ClusterNode cN2 = new ClusterNode(c.Value.LastAssignedCNodeID, cnode2);
-                             ClusterNode neighN2 = new ClusterNode(neigh.Value.LastAssignedCNodeID, cnodeNeighbor2);
-
-                             cN2.Neighbors.Add(neighN2.GNodeID, gMap.Nodes[cnode2].Neighbors[cnodeNeighbor2]);
-                             neighN2.Neighbors.Add(cN2.GNodeID, gMap.Nodes[cnodeNeighbor2].Neighbors[cnode2]);
-
-                             if (!c.Value.ClusterNodes.ContainsKey(cN2.ID) && !neigh.Value.ClusterNodes.ContainsKey(neighN2.ID))
-                             {
-                                 if (!c.Value.CNodeHasGNodeIdOf(cN2) && !neigh.Value.CNodeHasGNodeIdOf(neighN2))
-                                 {
-                                     //if the clusters don't contain these nodes, then set cluster parents, 
-                                     //raise ID and add them
-                                     c.Value.ClusterNodes.Add(cN2.ID, cN2);
-                                     cN2.ClusterParent = c.Value.ID;
-                                     neigh.Value.ClusterNodes.Add(neighN2.ID, neighN2);
-                                     neighN2.ClusterParent = neigh.Value.ID;
-
-                                     c.Value.LastAssignedCNodeID++;
-                                     neigh.Value.LastAssignedCNodeID++;
-                                 }
-                             }
-
-                         }
-                     }
-
-                 }
-             }*/
-            #endregion
         }
         
         private void BuildClusterNodeIntraEdges(AbstractionLayer layer)
@@ -779,7 +617,83 @@ namespace Bak
         {
             return 1 * (Math.Abs(gMap.Nodes[startID].Location.X/30 - gMap.Nodes[endID].Location.X/30) + Math.Abs(gMap.Nodes[startID].Location.Y/30 - gMap.Nodes[endID].Location.Y/30));
         }
-        
+
+        private void createClusterNodes(Cluster c, Cluster neighbor, Tuple<int, int> entrance)
+        {
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item1))
+            {
+                ClusterNode c1 = new ClusterNode(entrance.Item1);
+                HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                c.ClusterNodes.Add(c1.GNodeID, c1);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance.Item2))
+            {
+                ClusterNode c2 = new ClusterNode(entrance.Item2);
+                HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.ContainsKey(entrance.Item2))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance.Item1].Neighbors.Add(entrance.Item2, 1);
+            }
+            if (!HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.ContainsKey(entrance.Item1))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance.Item2].Neighbors.Add(entrance.Item1, 1);
+            }
+        }
+
+        private void createClusterNodes(Cluster c, Cluster neighbor, Tuple<int, int> entrance1, Tuple<int, int> entrance2)
+        {
+            //------------------FIRST
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item1))
+            {
+                ClusterNode c1 = new ClusterNode(entrance1.Item1);
+                HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                c.ClusterNodes.Add(c1.GNodeID, c1);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance1.Item2))
+            {
+                ClusterNode c2 = new ClusterNode(entrance1.Item2);
+                HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.ContainsKey(entrance1.Item2))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance1.Item1].Neighbors.Add(entrance1.Item2, 1);
+            }
+            if (!HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.ContainsKey(entrance1.Item1))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance1.Item2].Neighbors.Add(entrance1.Item1, 1);
+            }
+            //-----------------SECOND
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item1))
+            {
+                ClusterNode c1 = new ClusterNode(entrance2.Item1);
+                HierarchicalGraph[0].AbstractNodes.Add(c1.GNodeID, c1);
+                c.ClusterNodes.Add(c1.GNodeID, c1);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes.ContainsKey(entrance2.Item2))
+            {
+                ClusterNode c2 = new ClusterNode(entrance2.Item2);
+                HierarchicalGraph[0].AbstractNodes.Add(c2.GNodeID, c2);
+                neighbor.ClusterNodes.Add(c2.GNodeID, c2);
+            }
+
+            if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.ContainsKey(entrance2.Item2))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance2.Item1].Neighbors.Add(entrance2.Item2, 1);
+            }
+            if (!HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.ContainsKey(entrance2.Item1))
+            {
+                HierarchicalGraph[0].AbstractNodes[entrance2.Item2].Neighbors.Add(entrance2.Item1, 1);
+            }
+        }
+
         private HashSet<Cluster> getHPAClusterNeighbors(Cluster c)
         {
             HashSet<Cluster> res = new HashSet<Cluster>();
