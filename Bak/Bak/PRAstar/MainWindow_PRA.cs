@@ -1136,12 +1136,12 @@ namespace Bak
             switch (heuristic)
             {
                 case Heuristic.Manhattan:
-                    return 1 * (Math.Abs(layer.ClusterNodes[n].X - end.X) + Math.Abs(layer.ClusterNodes[n].Y - end.Y));
+                    return 1 * (Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30) + Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30));
 
                 case Heuristic.DiagonalShortcut:
                     float h = 0;
-                    int dx = Math.Abs(layer.ClusterNodes[n].X - end.X);
-                    int dy = Math.Abs(layer.ClusterNodes[n].Y - end.Y);
+                    int dx = Math.Abs(layer.ClusterNodes[n].X/30 - end.X/30);
+                    int dy = Math.Abs(layer.ClusterNodes[n].Y/30 - end.Y/30);
                     if (dx > dy)
                         h = 1.4f * dy + 1 * (dx - dy);
                     else

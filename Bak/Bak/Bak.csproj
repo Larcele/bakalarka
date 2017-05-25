@@ -100,6 +100,9 @@
     <None Include="GMaps\60x60.gmap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="GMaps\dao\brc101d.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="GMaps\dao\brc503d.map">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -143,6 +146,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="GMaps\simple.gmap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="GMaps\starcraft\AcrosstheCape.map">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="GMaps\unreachable.gmap">

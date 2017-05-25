@@ -7,6 +7,8 @@ PRA* : 136,8 path cost; 121 path length; 12,8122 ms; 502 nodes expanded
 A* manhattan: 124,6 path cost; 114 path length; 511,5588 ms;  8111 nodes expanded
 A* manhattan: 124,6 path cost; 114 path length; 593,2125 ms;  9524 nodes expanded
 
+----------------------------------------------------
+
 brc503d
 start: 320
 end: 81917
@@ -15,3 +17,51 @@ A* manhattan : 466,399 pc; 399 pl; 5102,6073 ms; 51704 expanded;
 HPA* : 478,9992 pc; 420 pl; 220,5746 ms; 3654 expanded;
 PRA* diagonal: 518,3994 pc; 449 pl; 17,6796 ms; 1992 expanded;
 PRA* manhattan: 518,3994 pc; 449 pl; 14,6796 ms; 1992 expanded;
+
+----------------------------------------------------
+
+drywatergulch
+end: 126407
+start: 64570
+HPA*:  454,5995 pc; 410 pl; 350,2783 ms; 3657 expanded
+PRA* diagonal: 501,5994 pc; 443 pl; 33,7983 ms; 2049 expanded
+PRA* diagonal: 501,5994 pc; 443 pl; 25,2418 ms; 2049 expanded
+A* manhattan: 446,5995 pc; 398 pl; 13145,8814 ms; 80731 expanded;
+A* diagonal: 446,5995 pc; 398 pl; 15228,9799 ms; 89331 expanded;
+
+----------------------------------------------------
+
+brc101d
+start:45497
+end:232072
+
+PRA* diagonal: 682,4008 pc; 571 pl; 25,8942 ms; 2534 expanded;
+HPA*: 614,6 pc; 542 pl; 68,1375 ms; 4516 expandded; 
+A* diagonal: 596,9998 pc; 518 pl; 988,1166 ms; 25229 expanded;
+A* diagonal: 596,9998 pc; 518 pl; 932,59 ms; 23838 expanded;
+
+----------------------------------------------------
+
+drywatergulch
+start: 238129
+end:  212132
+HPA*: 144 pc; 129 pl; 66,9228 ms; 1231 expanded
+PRA*: 158,6 pc; 142 pl; 11,5809 ms; 625 expanded;
+A*: 140,6 pc; 124 pl; 1439,2633 ms; 14301 expanded;
+
+-----------------------------------------------------
+
+accrossthecape [768 x 768]
+start: 1541
+end: 582907
+
+PRA* diagonal : 1475,407 pc; 1260 pl; 66,3346 ms; 5603 expanded
+HPA* : 1281 pc; 1108 pl; 2653,3554 ms; 10113 expanded
+A* manhattan: 1244 pc; 1053 pl; 128559,9131 ms; 345259 expanded
+
+PRA* -> 15,7% degradation
+HPA* -> 2,9% degradation
+
+----------------------------------------------------
+cluster build times:
+Starcraft - across the cape [768 x 768] HPA* : 50536,0713 ms. PRA* : 3158,7983 ms

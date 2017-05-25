@@ -592,8 +592,11 @@ namespace Bak
             while(true)
             {
                 if (invalidater.CancellationPending) { break; }
-
-                mainPanel.Invalidate();
+                
+                mainPanel.Invalidate(new Rectangle(
+                    Math.Abs(panel.AutoScrollPosition.X),
+                    Math.Abs(panel.AutoScrollPosition.Y),
+                    panel.Width, panel.Height));
                 System.Threading.Thread.Sleep(agentSpeed/2);
             }
         }
