@@ -305,6 +305,30 @@ namespace Bak
                 currNode = openSet.OrderBy(i => fScore[i.Key]).FirstOrDefault().Key;
                 if ((nextDestination.innerNodes.Contains(currNode) && !isFinalCluster) || (currNode == gMap.EndNodeID))
                 {
+                    if (currNode != gMap.EndNodeID)
+                    {
+                        //get the previous node
+                        int prev = cameFrom[currNode];
+                        var neighs = nextDestination.innerNodes.Where(n => gMap.Nodes[n].IsNeighbor(prev)).ToList();
+                        int nextMin = Int32.MaxValue; //init
+                        foreach (var n in neighs)
+                        {
+                            float tentativeG = gScore[prev] + gMap.Nodes[prev].Neighbors[n];
+                            if (tentativeG >= gScore[prev])
+                            {
+                                //not a better path
+                                tentativeG = gScore[prev];
+                            }
+                            cameFrom[n] = prev;
+                            gScore[n] = tentativeG;
+                            fScore[n] = gScore[n] + H_lowPRA(n, nextDestination);
+                            if (fScore[n] <= nextMin || fScore[n] <= float.MaxValue)
+                            {
+                                nextMin = n;
+                            }
+                        }
+                        currNode = nextMin;
+                    }
                     //break the loop and reconstruct path below
                     break;
                 }
