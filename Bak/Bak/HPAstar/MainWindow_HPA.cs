@@ -15,6 +15,8 @@ namespace Bak
         private void StartHPAstarSearch(object sender, DoWorkEventArgs e)
         {
             List<int> path = new List<int>();
+            bool startNew = true;
+            bool endNew = true;
 
             //get the start node cluster
             int startCID = gMap.Nodes[gMap.StartNodeID].HPAClusterParent;
@@ -25,17 +27,32 @@ namespace Bak
             //we create the temporary start clusterNode and calculate the distance between 
             //it and other cluster nodes
             ClusterNode tmpStart = new ClusterNode(gMap.StartNodeID);
-            startingCluster.ClusterNodes.Add(tmpStart.GNodeID, tmpStart);
-            HierarchicalGraph[0].AbstractNodes.Add(tmpStart.GNodeID, tmpStart);
-            tmpStart.ClusterParent = startCID;
-            calculateDistInnerClusterNodes_Tmp(tmpStart, startingCluster);
+            if (startingCluster.ClusterNodes.ContainsKey(tmpStart.GNodeID))
+            {
+                startNew = false;
+                tmpStart = startingCluster.ClusterNodes[tmpStart.GNodeID];
+            }
+            else
+            {
+                startingCluster.ClusterNodes.Add(tmpStart.GNodeID, tmpStart);
+                HierarchicalGraph[0].AbstractNodes.Add(tmpStart.GNodeID, tmpStart);
+                tmpStart.ClusterParent = startCID;
+                calculateDistInnerClusterNodes_Tmp(tmpStart, startingCluster);
+            }
 
             ClusterNode tmpEnd = new ClusterNode(gMap.EndNodeID);
-            endingCluster.ClusterNodes.Add(tmpEnd.GNodeID, tmpEnd);
-            HierarchicalGraph[0].AbstractNodes.Add(tmpEnd.GNodeID, tmpEnd);
-            tmpEnd.ClusterParent = endCID;
-            calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);
-
+            if (endingCluster.ClusterNodes.ContainsKey(tmpEnd.GNodeID))
+            {
+                endNew = false;
+                tmpEnd = endingCluster.ClusterNodes[tmpEnd.GNodeID];
+            }
+            else
+            {
+                endingCluster.ClusterNodes.Add(tmpEnd.GNodeID, tmpEnd);
+                HierarchicalGraph[0].AbstractNodes.Add(tmpEnd.GNodeID, tmpEnd);
+                tmpEnd.ClusterParent = endCID;
+                calculateDistInnerClusterNodes_Tmp(tmpEnd, endingCluster);
+            }
             var abstractPath = AstarAbstractHPASearch(tmpStart, endingCluster);
             
             //goes through the low-level clusters and partially builds a path on the grid base.
@@ -49,7 +66,6 @@ namespace Bak
                 partialPath = AstarHPALowestLevelSearch(HierarchicalGraph[0].AbstractNodes[abstractPath[i]],
                                                      HierarchicalGraph[0].AbstractNodes[abstractPath[i - 1]],
                                                      startID);
-
                 AddToPathfSol(partialPath);
 
                 if (i == abstractPath.Count - 1)
@@ -61,11 +77,16 @@ namespace Bak
                 //since A* path returned is reversed, the first element was the last (end) node.
                 startID = partialPath[0];
             }
-
-            startingCluster.ClusterNodes.Remove(tmpStart.GNodeID);
-            endingCluster.ClusterNodes.Remove(tmpEnd.GNodeID);
-            HierarchicalGraph[0].AbstractNodes.Remove(tmpEnd.GNodeID);
-            HierarchicalGraph[0].AbstractNodes.Remove(tmpStart.GNodeID);
+            if (endNew)
+            {
+                endingCluster.ClusterNodes.Remove(tmpEnd.GNodeID);
+                HierarchicalGraph[0].AbstractNodes.Remove(tmpEnd.GNodeID);
+            }
+            if (startNew)
+            {
+                startingCluster.ClusterNodes.Remove(tmpStart.GNodeID);
+                HierarchicalGraph[0].AbstractNodes.Remove(tmpStart.GNodeID);
+            }
 
             pfStopWatch.Stop();
         }
@@ -79,7 +100,7 @@ namespace Bak
 
             AbstractionLayer layer = new AbstractionLayer(0, new List<Cluster>());
 
-            //we make 10 x 10 clusters , from the pper left to the lower right.
+            //we make 10 x 10 clusters , from the upper left to the lower right.
             if (gMap.Width >= 20 && gMap.Height >= 20)
             {
                 HPACsize = 10;
@@ -200,16 +221,13 @@ namespace Bak
             foreach (var c in layer.Clusters)
             {
                 //for every cluster, we look at its OuterNodes - all 4 sides.
-                //if a side is already resolved, we continue checking the othrs. 
-                //If it is not, we look at the neighboring nodes. If they are traversable, 
+                //We look at the neighboring nodes. If they are traversable, 
                 //we start tracking an entrance. We expand an entrance as long as both the neighboring nodes
                 //are traversable. If one of them is not, we stop, look at the number of entrances and 
                 //dependng on its size, create the corresponding number of cluster nodes. 
 
                 foreach (var side in c.Value.OuterNodes)
                 {
-                    // if (side.Value.IsResolved()) { continue; }
-
                     Cluster neighbor;
                     List<Tuple<int, int>> possibleEntrances = new List<Tuple<int, int>>();
                     switch (side.Key)
