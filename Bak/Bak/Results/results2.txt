@@ -9,6 +9,24 @@ A* manhattan: 124,6 path cost; 114 path length; 593,2125 ms;  9524 nodes expande
 
 ----------------------------------------------------
 
+drywatergulch
+start: 238129
+end:  212132
+HPA*: 144 pc; 129 pl; 66,9228 ms; 1231 expanded
+PRA*: 158,6 pc; 142 pl; 11,5809 ms; 625 expanded;
+A*: 140,6 pc; 124 pl; 1439,2633 ms; 14301 expanded;
+
+-----------------------------------------------------
+
+
+drywatergulch
+start: 239049
+end:  241348
+HPA*: 277,5999 pc; 269 pl; 74,011 ms; 2303 expanded
+PRA*: 313,3997 pc; 278 pl; 44,0371 ms; 1233 expanded
+A*: 275,5999 pc; 267 pl; 1567,1434 ms; 21217 expanded
+
+-----------------------------------------------------
 brc503d
 start: 320
 end: 81917
@@ -42,14 +60,6 @@ A* diagonal: 596,9998 pc; 518 pl; 932,59 ms; 23838 expanded;
 
 ----------------------------------------------------
 
-drywatergulch
-start: 238129
-end:  212132
-HPA*: 144 pc; 129 pl; 66,9228 ms; 1231 expanded
-PRA*: 158,6 pc; 142 pl; 11,5809 ms; 625 expanded;
-A*: 140,6 pc; 124 pl; 1439,2633 ms; 14301 expanded;
-
------------------------------------------------------
 
 accrossthecape [768 x 768]
 start: 1541
@@ -63,5 +73,87 @@ PRA* -> 15,7% degradation
 HPA* -> 2,9% degradation
 
 ----------------------------------------------------
-cluster build times:
-Starcraft - across the cape [768 x 768] HPA* : 50536,0713 ms. PRA* : 3158,7983 ms
+
+*************************************
+HPA* cluster transition test
+5/7 borers
+
+map07, start 8275, end 8413, cost: 64,40001
+
+5 border -> 65,20001 cost
+
+------
+start 667, end same
+5 border -> cost 118,2
+5/7 border -> 117,2
+
+------
+start 9888, end same
+5 border > 97
+5/7 border > 97,2
+
+-----
+start 2498, end same 
+5 border > 138,8
+5/7 border >139,6
+
+------
+start 144, end same
+5 border > 104,2
+5/7 border > 105,2
+
+************************************
+map fillness (how many nodes are non-traversable)
+
+map01 - 9/25 
+map02 - 127/400
+map03 - 162/400
+map04 - 543/2500
+map05 - 670/2500
+map06 - 1053/2500
+map07 - 4645/10000
+map08 - 6445/10000
+map09 - 13844/40000
+60x60 - 1616/3600
+den401 - 17811/29267
+den204 - 1501/4355
+hrt001 - 7940/11648
+brc503d - 14889/82239
+brc101 - 215494/245375
+accrossTheCape - 197537/589823
+drywatergulch - 132339/ 262144
+
+*********
+
+Abstraction build times
+
+20x15 map02:   PRA* -> 12,2332; HPA* -> 45,0591
+	  map03	   PRA* -> 13,9237; HPA* -> 49,9802
+			 
+50x50 map:	 PRA* -> 18,1181; HPA* -> 248,5478
+					 19,3124; HPA* -> 204,4688
+					 10,7545;		  181,1809  
+60x60				 11,1528; 		  246,2223
+
+den204 (65 x 65)	 16,4566		  427,3745
+
+100 x 100			 30,4077;		  762,2582
+					 37,0467;		  726,034
+					 32,1506;		  748,1914
+					 18,9704;		  766,199
+
+hrt001 	105 x 110	 25,4476		  1603,572
+
+200 x 200  			 235,4628;        2711,9479
+					 224,592;		  2611,7036
+
+brc503 
+320 x 257			 588,5586		  5809,432
+
+640 x 380 			 372,5577;		  42302,855
+
+drywatergulch (512 x 512) 1121,1691;  28462,0827
+
+brc101d	(640 x 383)	 378,1458		  
+
+accrossTheCape(800 x 800) 3426,1156;  49429,3321

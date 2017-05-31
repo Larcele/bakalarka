@@ -232,6 +232,9 @@ namespace Bak
                 CurrentMapName = Path.GetFileName(fileDialog.FileName);
                 RefreshMaptests();
 
+                int nontraversable = gMap.Nodes.Where(n => !n.Value.IsTraversable()).ToList().Count;
+                MessageBox.Show(nontraversable+"");
+
             }
         }
 
@@ -593,10 +596,7 @@ namespace Bak
             {
                 if (invalidater.CancellationPending) { break; }
                 
-                mainPanel.Invalidate(new Rectangle(
-                    Math.Abs(panel.AutoScrollPosition.X),
-                    Math.Abs(panel.AutoScrollPosition.Y),
-                    panel.Width, panel.Height));
+                mainPanel.Invalidate();
                 System.Threading.Thread.Sleep(agentSpeed/2);
             }
         }
@@ -1045,14 +1045,18 @@ namespace Bak
             selectedTest = ((TestCase)cb_mapTests.SelectedItem);
 
             //      set start/end nodes
-            Node prevStart = gMap.Nodes[gMap.StartNodeID];
-            Node prevEnd = gMap.Nodes[gMap.EndNodeID];
-
-            prevStart.Type = GameMap.NodeType.Traversable;
-            prevEnd.Type = GameMap.NodeType.Traversable;
-            prevStart.BackColor = ColorPalette.NodeColor_Traversable;
-            prevEnd.BackColor = ColorPalette.NodeColor_Traversable;
-
+            if (gMap.StartNodeID != -1)
+            {
+                Node prevStart = gMap.Nodes[gMap.StartNodeID];
+                prevStart.Type = GameMap.NodeType.Traversable;
+                prevStart.BackColor = ColorPalette.NodeColor_Traversable;
+            }
+            if (gMap.EndNodeID != -1)
+            {
+                Node prevEnd = gMap.Nodes[gMap.EndNodeID];
+                prevEnd.Type = GameMap.NodeType.Traversable;
+                prevEnd.BackColor = ColorPalette.NodeColor_Traversable;
+            }
             gMap.StartNodeID = selectedTest.startPos;
             gMap.EndNodeID = selectedTest.endPos;
 

@@ -76,6 +76,27 @@ namespace Bak
             }
 
 
+            ///--------------------------------------------------------------------------------
+
+            TestCase t_dwg_obstl = new TestCase("Obstl", "drywatergulch.map", 239049, 241348, 100);
+            t_dwg_obstl.nodeSwaps = new Dictionary<int, GameMap.NodeType>()
+            {
+                { 234263, GameMap.NodeType.Obstacle},
+                { 233751, GameMap.NodeType.Obstacle},
+                { 233239, GameMap.NodeType.Obstacle},
+                { 232727, GameMap.NodeType.Obstacle},
+                { 232215, GameMap.NodeType.Obstacle},
+                { 231703, GameMap.NodeType.Obstacle},
+                { 231191, GameMap.NodeType.Obstacle}
+            };
+            if (res.ContainsKey(t_dwg_obstl.MapName))
+            {
+                res[t_map07_tun2.MapName].Add(t_dwg_obstl);
+            }
+            else
+            {
+                res.Add(t_dwg_obstl.MapName, new List<TestCase>() { t_dwg_obstl });
+            }
 
             return res;
         }
